@@ -14,13 +14,15 @@ import {
   X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SidebarContext } from "@/components/ui/sidebar";
+import { useSidebar } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 export function AppSidebar() {
-  const { isOpen, setIsOpen } = React.useContext(SidebarContext);
+  const { state, setOpen, openMobile, setOpenMobile } = useSidebar();
   const location = useLocation();
   const isMobile = useIsMobile();
+
+  const isOpen = state === "expanded";
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: Home },
@@ -38,18 +40,26 @@ export function AppSidebar() {
     ${isOpen ? "w-64" : "w-16"} 
     bg-white border-r border-gray-200 
     transition-all duration-300 ease-in-out
-    ${isMobile ? (isOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0"}
+    ${isMobile ? (openMobile ? "translate-x-0" : "-translate-x-full") : "translate-x-0"}
   `;
 
   const overlayClasses = `
     fixed inset-0 bg-black bg-opacity-50 z-30
     transition-opacity duration-300 ease-in-out
-    ${isMobile && isOpen ? "opacity-100 visible" : "opacity-0 invisible"}
+    ${isMobile && openMobile ? "opacity-100 visible" : "opacity-0 invisible"}
   `;
+
+  const toggleSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(!openMobile);
+    } else {
+      setOpen(!isOpen);
+    }
+  };
 
   return (
     <>
-      <div className={overlayClasses} onClick={() => setIsOpen(false)} />
+      <div className={overlayClasses} onClick={() => setOpenMobile(false)} />
       <aside className={sidebarClasses}>
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-4">
@@ -59,10 +69,10 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={toggleSidebar}
               className={`${isMobile ? "block" : "hidden"}`}
             >
-              {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {openMobile ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </Button>
           </div>
 
@@ -81,7 +91,7 @@ export function AppSidebar() {
                       : "text-gray-600 hover:bg-gray-100"
                     }
                   `}
-                  onClick={() => isMobile && setIsOpen(false)}
+                  onClick={() => isMobile && setOpenMobile(false)}
                 >
                   <item.icon className="w-5 h-5 mr-3" />
                   <span className={!isOpen && !isMobile ? "hidden" : ""}>
@@ -98,7 +108,7 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleSidebar}
           className="fixed left-4 bottom-4 z-50"
         >
           {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
