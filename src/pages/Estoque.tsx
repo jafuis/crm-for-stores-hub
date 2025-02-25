@@ -1,9 +1,8 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Package, Search, Edit, Trash2, Plus } from "lucide-react";
+import { Package, Search, Edit, Trash2, Plus, MinusIcon, PlusIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface Produto {
@@ -52,6 +51,16 @@ export default function Estoque() {
       p.id === produtoEditando.id ? produtoEditando : p
     ));
     setProdutoEditando(null);
+  };
+
+  const handleQuantidadeChange = (id: string, delta: number) => {
+    setProdutos(produtos.map(produto => {
+      if (produto.id === id) {
+        const novaQuantidade = Math.max(0, produto.quantidade + delta);
+        return { ...produto, quantidade: novaQuantidade };
+      }
+      return produto;
+    }));
   };
 
   const produtosFiltrados = produtos.filter(produto =>
@@ -129,102 +138,103 @@ export default function Estoque() {
         </div>
       </div>
 
-      <Card className="p-6">
-        {produtos.length === 0 ? (
-          <p className="text-center text-muted-foreground">
-            Nenhum produto cadastrado.
-          </p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4">Produto</th>
-                  <th className="text-left py-3 px-4">Quantidade</th>
-                  <th className="text-left py-3 px-4">Valor Unitário</th>
-                  <th className="text-left py-3 px-4">Valor Total</th>
-                  <th className="text-left py-3 px-4">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {produtosFiltrados.map((produto) => (
-                  <tr key={produto.id} className="border-b">
-                    <td className="py-3 px-4">{produto.nome}</td>
-                    <td className="py-3 px-4">{produto.quantidade}</td>
-                    <td className="py-3 px-4">{formatarMoeda(produto.valorUnitario)}</td>
-                    <td className="py-3 px-4">
-                      {formatarMoeda(produto.quantidade * produto.valorUnitario)}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setProdutoEditando(produto)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent>
-                            <SheetHeader>
-                              <SheetTitle>Editar Produto</SheetTitle>
-                            </SheetHeader>
-                            {produtoEditando && (
-                              <div className="space-y-4 mt-4">
-                                <Input
-                                  placeholder="Nome do produto"
-                                  value={produtoEditando.nome}
-                                  onChange={e => setProdutoEditando({
-                                    ...produtoEditando,
-                                    nome: e.target.value
-                                  })}
-                                />
-                                <Input
-                                  placeholder="Quantidade"
-                                  type="number"
-                                  min="0"
-                                  value={produtoEditando.quantidade}
-                                  onChange={e => setProdutoEditando({
-                                    ...produtoEditando,
-                                    quantidade: Number(e.target.value)
-                                  })}
-                                />
-                                <Input
-                                  placeholder="Valor unitário"
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={produtoEditando.valorUnitario}
-                                  onChange={e => setProdutoEditando({
-                                    ...produtoEditando,
-                                    valorUnitario: Number(e.target.value)
-                                  })}
-                                />
-                                <Button onClick={handleSalvarEdicao} className="w-full">
-                                  Salvar Alterações
-                                </Button>
-                              </div>
-                            )}
-                          </SheetContent>
-                        </Sheet>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleExcluirProduto(produto.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {produtosFiltrados.map((produto) => (
+          <Card key={produto.id} className="p-4">
+            <div className="flex flex-col space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium">{produto.nome}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Valor: {formatarMoeda(produto.valorUnitario)}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setProdutoEditando(produto)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent>
+                      <SheetHeader>
+                        <SheetTitle>Editar Produto</SheetTitle>
+                      </SheetHeader>
+                      {produtoEditando && (
+                        <div className="space-y-4 mt-4">
+                          <Input
+                            placeholder="Nome do produto"
+                            value={produtoEditando.nome}
+                            onChange={e => setProdutoEditando({
+                              ...produtoEditando,
+                              nome: e.target.value
+                            })}
+                          />
+                          <Input
+                            placeholder="Quantidade"
+                            type="number"
+                            min="0"
+                            value={produtoEditando.quantidade}
+                            onChange={e => setProdutoEditando({
+                              ...produtoEditando,
+                              quantidade: Number(e.target.value)
+                            })}
+                          />
+                          <Input
+                            placeholder="Valor unitário"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={produtoEditando.valorUnitario}
+                            onChange={e => setProdutoEditando({
+                              ...produtoEditando,
+                              valorUnitario: Number(e.target.value)
+                            })}
+                          />
+                          <Button onClick={handleSalvarEdicao} className="w-full">
+                            Salvar Alterações
+                          </Button>
+                        </div>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleExcluirProduto(produto.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between border rounded-lg p-2">
+                <p className="text-sm">Total: {formatarMoeda(produto.quantidade * produto.valorUnitario)}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleQuantidadeChange(produto.id, -1)}
+                  >
+                    <MinusIcon className="h-4 w-4" />
+                  </Button>
+                  <span className="w-12 text-center">{produto.quantidade}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleQuantidadeChange(produto.id, 1)}
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
