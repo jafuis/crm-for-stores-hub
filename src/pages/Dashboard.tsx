@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
 import { Target, DollarSign, Users, Calendar } from "lucide-react";
@@ -32,22 +32,62 @@ export default function Dashboard() {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   
-  // Calcular vendas do dia
+  useEffect(() => {
+    const vendasSalvas = localStorage.getItem('vendas');
+    const clientesSalvos = localStorage.getItem('clientes');
+    const metaSalva = localStorage.getItem('metaDiaria');
+    const ultimaVerificacao = localStorage.getItem('ultimaVerificacaoMes');
+
+    if (vendasSalvas) {
+      const todasVendas = JSON.parse(vendasSalvas);
+      
+      // Verifica se mudou o mês desde a última verificação
+      const mesAtual = format(new Date(), 'yyyy-MM');
+      if (!ultimaVerificacao || ultimaVerificacao !== mesAtual) {
+        // Arquiva vendas do mês anterior
+        const vendasAtualizadas = todasVendas.map((venda: Venda) => {
+          const dataVenda = parseISO(venda.data);
+          const mesVenda = format(dataVenda, 'yyyy-MM');
+          
+          if (mesVenda !== mesAtual && !venda.arquivada) {
+            return { ...venda, arquivada: true };
+          }
+          return venda;
+        });
+        
+        setVendas(vendasAtualizadas);
+        localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+        localStorage.setItem('ultimaVerificacaoMes', mesAtual);
+      } else {
+        setVendas(todasVendas);
+      }
+    }
+
+    if (clientesSalvos) {
+      setClientes(JSON.parse(clientesSalvos));
+    }
+
+    if (metaSalva) {
+      setMetaDiaria(Number(metaSalva));
+    }
+  }, []);
+
+  // Calcular vendas do dia (apenas não arquivadas)
   const vendasDoDia = vendas
     .filter(venda => {
       const dataVenda = new Date(venda.data);
-      return format(dataVenda, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+      return format(dataVenda, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && !venda.arquivada;
     })
     .reduce((total, venda) => total + venda.valor, 0);
 
-  // Calcular vendas do mês
+  // Calcular vendas do mês (apenas não arquivadas)
   const vendasDoMes = vendas
     .filter(venda => {
       const dataVenda = new Date(venda.data);
       return isWithinInterval(dataVenda, {
         start: startOfMonth(currentDate),
         end: endOfMonth(currentDate)
-      });
+      }) && !venda.arquivada;
     })
     .reduce((total, venda) => total + venda.valor, 0);
 
@@ -63,25 +103,6 @@ export default function Dashboard() {
       localStorage.setItem('metaDiaria', valor.toString());
     }
   };
-
-  // Carregar dados do localStorage
-  useEffect(() => {
-    const vendasSalvas = localStorage.getItem('vendas');
-    const clientesSalvos = localStorage.getItem('clientes');
-    const metaSalva = localStorage.getItem('metaDiaria');
-
-    if (vendasSalvas) {
-      setVendas(JSON.parse(vendasSalvas));
-    }
-
-    if (clientesSalvos) {
-      setClientes(JSON.parse(clientesSalvos));
-    }
-
-    if (metaSalva) {
-      setMetaDiaria(Number(metaSalva));
-    }
-  }, []); // Executa apenas uma vez ao montar o componente
 
   return (
     <div className="space-y-6 animate-fadeIn">
