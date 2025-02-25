@@ -1,9 +1,6 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./App.css";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
@@ -11,34 +8,59 @@ import Vendas from "./pages/Vendas";
 import Estoque from "./pages/Estoque";
 import Fornecedores from "./pages/Fornecedores";
 import Tarefas from "./pages/Tarefas";
+import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
-import NotFound from "./pages/NotFound";
+import Aniversariantes from "./pages/Aniversariantes";
 
-const queryClient = new QueryClient();
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <AppLayout />,
+    errorElement: <NotFound />,
+    children: [
+      {
+        index: true,
+        element: <Dashboard />,
+      },
+      {
+        path: "clientes",
+        element: <Clientes />,
+      },
+      {
+        path: "vendas",
+        element: <Vendas />,
+      },
+      {
+        path: "estoque",
+        element: <Estoque />,
+      },
+      {
+        path: "fornecedores",
+        element: <Fornecedores />,
+      },
+      {
+        path: "tarefas",
+        element: <Tarefas />,
+      },
+      {
+        path: "notificacoes",
+        element: <Notificacoes />,
+      },
+      {
+        path: "aniversariantes",
+        element: <Aniversariantes />,
+      },
+      {
+        path: "configuracoes",
+        element: <Configuracoes />,
+      },
+    ],
+  },
+]);
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/clientes" element={<Clientes />} />
-            <Route path="/vendas" element={<Vendas />} />
-            <Route path="/estoque" element={<Estoque />} />
-            <Route path="/fornecedores" element={<Fornecedores />} />
-            <Route path="/tarefas" element={<Tarefas />} />
-            <Route path="/notificacoes" element={<Notificacoes />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return <RouterProvider router={router} />;
+}
 
 export default App;
