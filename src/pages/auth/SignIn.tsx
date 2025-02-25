@@ -25,9 +25,6 @@ export default function SignIn() {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: {
-          persistSession: rememberMe
-        }
       });
 
       if (error) throw error;
