@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -10,8 +11,7 @@ import {
   Menu,
   Gift,
   MessageSquare,
-  PartyPopper,
-  LogOut
+  PartyPopper
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,7 +31,6 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface Cliente {
   id: string;
@@ -77,25 +76,6 @@ export function AppSidebar() {
     setOpenMobile(!openMobile);
   };
 
-  const handleLogout = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      toast({
-        title: "Logout realizado",
-        description: "Você foi desconectado com sucesso.",
-      });
-      navigate("/auth/signin");
-    } catch (error: any) {
-      toast({
-        title: "Erro ao sair",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white h-full">
       <div className="px-3 py-4 border-b">
@@ -124,15 +104,6 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={handleLogout}
-                className="text-red-500 hover:bg-red-50"
-              >
-                <LogOut className="w-5 h-5" />
-                <span>Sair</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

@@ -12,37 +12,14 @@ import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Aniversariantes from "./pages/Aniversariantes";
-import SignIn from "./pages/auth/SignIn";
-import SignUp from "./pages/auth/SignUp";
-import ResetPassword from "./pages/auth/ResetPassword";
-import AuthRequired from "./components/AuthRequired";
 
 const router = createBrowserRouter([
   {
-    path: "/auth",
-    children: [
-      {
-        path: "signin",
-        element: <SignIn />,
-      },
-      {
-        path: "signup",
-        element: <SignUp />,
-      },
-      {
-        path: "reset-password",
-        element: <ResetPassword />,
-      },
-    ],
-  },
-  {
     path: "/",
     element: (
-      <AuthRequired>
-        <AppLayout>
-          <Outlet />
-        </AppLayout>
-      </AuthRequired>
+      <AppLayout>
+        <Outlet />
+      </AppLayout>
     ),
     errorElement: <NotFound />,
     children: [
