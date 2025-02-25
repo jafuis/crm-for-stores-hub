@@ -6,6 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Cliente {
   id: string;
@@ -54,9 +65,7 @@ export default function Clientes() {
       novosClientes = [...clientes, cliente];
     }
 
-    // Ordenar por ordem alfabética
     novosClientes.sort((a, b) => a.nome.localeCompare(b.nome));
-
     setClientes(novosClientes);
     setNovoCliente({
       nome: "",
@@ -118,7 +127,7 @@ export default function Clientes() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn pt-16">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Clientes</h1>
@@ -128,10 +137,10 @@ export default function Clientes() {
           <SheetTrigger asChild>
             <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
               <UserPlus className="w-4 h-4 mr-2" />
-              {editingClient ? "Editar Cliente" : "Novo Cliente"}
+              Novo Cliente
             </Button>
           </SheetTrigger>
-          <SheetContent>
+          <SheetContent className="bg-white">
             <SheetHeader>
               <SheetTitle>{editingClient ? "Editar Cliente" : "Adicionar Novo Cliente"}</SheetTitle>
             </SheetHeader>
@@ -201,7 +210,10 @@ export default function Clientes() {
               <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4">
                   <div className="font-semibold">{cliente.nome}</div>
-                  <StarRating value={cliente.classificacao} readOnly />
+                  <StarRating 
+                    value={cliente.classificacao} 
+                    onChange={(rating) => handleStarClick(cliente.id, rating)}
+                  />
                 </div>
               </div>
             </AccordionTrigger>
@@ -220,22 +232,89 @@ export default function Clientes() {
                   {cliente.aniversario}
                 </div>
                 <div className="flex items-center gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditarCliente(cliente)}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    Editar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleExcluirCliente(cliente.id)}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Excluir
-                  </Button>
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditarCliente(cliente)}
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Editar
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="bg-white">
+                      <SheetHeader>
+                        <SheetTitle>Editar Cliente</SheetTitle>
+                      </SheetHeader>
+                      <div className="space-y-4 mt-4">
+                        <Input
+                          placeholder="Nome"
+                          value={novoCliente.nome}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Telefone"
+                          value={novoCliente.telefone}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+                        />
+                        <Input
+                          placeholder="Email"
+                          type="email"
+                          value={novoCliente.email}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                        />
+                        <Input
+                          type="date"
+                          placeholder="Aniversário"
+                          value={novoCliente.aniversario}
+                          onChange={(e) => setNovoCliente({ ...novoCliente, aniversario: e.target.value })}
+                        />
+                        <div>
+                          <p className="mb-2 text-sm text-gray-600">Classificação</p>
+                          <StarRating
+                            value={novoCliente.classificacao}
+                            onChange={(rating) => setNovoCliente({ ...novoCliente, classificacao: rating })}
+                          />
+                        </div>
+                        <Button 
+                          className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
+                          onClick={handleAdicionarCliente}
+                        >
+                          Salvar Alterações
+                        </Button>
+                      </div>
+                    </SheetContent>
+                  </Sheet>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-white">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Deseja excluir este cliente? Esta ação não pode ser desfeita.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={() => handleExcluirCliente(cliente.id)}
+                          className="bg-red-500 hover:bg-red-600"
+                        >
+                          Excluir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </AccordionContent>
