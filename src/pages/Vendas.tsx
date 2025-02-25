@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DollarSign, Calendar, FileText, Archive, Trash2, RefreshCcw } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Venda {
   id: string;
@@ -16,6 +18,7 @@ interface Venda {
 export default function Vendas() {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
+  const { toast } = useToast();
 
   const [novaVenda, setNovaVenda] = useState({
     valor: "",
@@ -30,7 +33,14 @@ export default function Vendas() {
   }, []);
 
   const handleRegistrarVenda = () => {
-    if (!novaVenda.valor) return;
+    if (!novaVenda.valor) {
+      toast({
+        title: "Erro",
+        description: "Por favor, insira um valor para a venda",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const venda: Venda = {
       id: (vendas.length + 1).toString(),
@@ -42,6 +52,11 @@ export default function Vendas() {
     const novasVendas = [venda, ...vendas];
     setVendas(novasVendas);
     localStorage.setItem('vendas', JSON.stringify(novasVendas));
+
+    toast({
+      title: "Venda registrada",
+      description: `Venda de ${formatarValor(venda.valor)} registrada com sucesso!`,
+    });
 
     setNovaVenda({
       valor: "",
@@ -57,12 +72,22 @@ export default function Vendas() {
     );
     setVendas(vendasAtualizadas);
     localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+
+    toast({
+      title: "Venda atualizada",
+      description: "Status da venda atualizado com sucesso!",
+    });
   };
 
   const handleExcluirVenda = (id: string) => {
     const vendasAtualizadas = vendas.filter(venda => venda.id !== id);
     setVendas(vendasAtualizadas);
     localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+
+    toast({
+      title: "Venda excluída",
+      description: "Venda removida com sucesso!",
+    });
   };
 
   const formatarValor = (valor: number) => {

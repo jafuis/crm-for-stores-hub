@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface Cliente {
   id: string;
@@ -35,6 +37,27 @@ export default function Clientes() {
     localStorage.setItem('clientes', JSON.stringify(clientes));
   }, [clientes]);
 
+  const handleAdicionarCliente = () => {
+    if (!novoCliente.nome || !novoCliente.telefone || !novoCliente.email) return;
+
+    const cliente: Cliente = {
+      id: (clientes.length + 1).toString(),
+      ...novoCliente
+    };
+
+    const novosClientes = [...clientes, cliente];
+    setClientes(novosClientes);
+    localStorage.setItem('clientes', JSON.stringify(novosClientes));
+
+    setNovoCliente({
+      nome: "",
+      telefone: "",
+      email: "",
+      aniversario: "",
+      classificacao: 1,
+    });
+  };
+
   const clientesFiltrados = clientes.filter(cliente =>
     cliente.nome.toLowerCase().includes(busca.toLowerCase()) ||
     cliente.email.toLowerCase().includes(busca.toLowerCase()) ||
@@ -48,6 +71,67 @@ export default function Clientes() {
           <h1 className="text-2xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">Gerencie seus clientes</p>
         </div>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
+              <UserPlus className="w-4 h-4 mr-2" />
+              Novo Cliente
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Adicionar Novo Cliente</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-4 mt-4">
+              <div>
+                <Input
+                  placeholder="Nome"
+                  value={novoCliente.nome}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Telefone"
+                  value={novoCliente.telefone}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Email"
+                  type="email"
+                  value={novoCliente.email}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                />
+              </div>
+              <div>
+                <Input
+                  type="date"
+                  placeholder="Aniversário"
+                  value={novoCliente.aniversario}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, aniversario: e.target.value })}
+                />
+              </div>
+              <div>
+                <Input
+                  type="number"
+                  placeholder="Classificação (1-5)"
+                  min="1"
+                  max="5"
+                  value={novoCliente.classificacao}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, classificacao: Number(e.target.value) })}
+                />
+              </div>
+              <Button 
+                className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
+                onClick={handleAdicionarCliente}
+              >
+                Adicionar Cliente
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
 
       <div className="flex flex-col md:flex-row justify-between gap-4">

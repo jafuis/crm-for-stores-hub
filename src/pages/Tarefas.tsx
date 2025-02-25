@@ -3,12 +3,11 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Plus, Calendar } from "lucide-react";
+import { CheckSquare, Plus } from "lucide-react";
 
 interface Tarefa {
   id: string;
   titulo: string;
-  vencimento: string;
   concluida: boolean;
 }
 
@@ -16,7 +15,6 @@ export default function Tarefas() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [novaTarefa, setNovaTarefa] = useState({
     titulo: "",
-    vencimento: "",
   });
 
   useEffect(() => {
@@ -31,23 +29,26 @@ export default function Tarefas() {
   }, [tarefas]);
 
   const handleAdicionarTarefa = () => {
-    if (!novaTarefa.titulo || !novaTarefa.vencimento) return;
+    if (!novaTarefa.titulo) return;
 
     const tarefa: Tarefa = {
       id: (tarefas.length + 1).toString(),
       titulo: novaTarefa.titulo,
-      vencimento: novaTarefa.vencimento,
       concluida: false,
     };
 
-    setTarefas([...tarefas, tarefa]);
-    setNovaTarefa({ titulo: "", vencimento: "" });
+    const novasTarefas = [...tarefas, tarefa];
+    setTarefas(novasTarefas);
+    localStorage.setItem('tarefas', JSON.stringify(novasTarefas));
+    setNovaTarefa({ titulo: "" });
   };
 
   const toggleTarefaConcluida = (id: string) => {
-    setTarefas(tarefas.map(tarefa =>
+    const tarefasAtualizadas = tarefas.map(tarefa =>
       tarefa.id === id ? { ...tarefa, concluida: !tarefa.concluida } : tarefa
-    ));
+    );
+    setTarefas(tarefasAtualizadas);
+    localStorage.setItem('tarefas', JSON.stringify(tarefasAtualizadas));
   };
 
   return (
@@ -62,25 +63,21 @@ export default function Tarefas() {
       <Card className="p-6">
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Nova Tarefa</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex gap-4">
             <Input
               placeholder="Título da tarefa"
               value={novaTarefa.titulo}
               onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })}
+              className="flex-1"
             />
-            <Input
-              type="date"
-              value={novaTarefa.vencimento}
-              onChange={(e) => setNovaTarefa({ ...novaTarefa, vencimento: e.target.value })}
-            />
+            <Button 
+              className="bg-[#9b87f5] hover:bg-[#7e69ab]"
+              onClick={handleAdicionarTarefa}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar
+            </Button>
           </div>
-          <Button 
-            className="w-full md:w-auto bg-[#9b87f5] hover:bg-[#7e69ab]"
-            onClick={handleAdicionarTarefa}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Tarefa
-          </Button>
         </div>
       </Card>
 
@@ -96,10 +93,6 @@ export default function Tarefas() {
               </button>
               <div className={`flex-1 ${tarefa.concluida ? 'line-through text-gray-500' : ''}`}>
                 <h3 className="font-medium">{tarefa.titulo}</h3>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <Calendar className="w-4 h-4" />
-                  <span>Vencimento: {new Date(tarefa.vencimento).toLocaleDateString()}</span>
-                </div>
               </div>
             </div>
           </Card>
