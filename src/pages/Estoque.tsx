@@ -1,85 +1,194 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Package, Search, Edit, Trash2, Plus, MinusIcon, PlusIcon } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Produto {
   id: string;
-  nome: string;
-  quantidade: number;
-  valorUnitario: number;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  supplier?: string;
 }
 
 export default function Estoque() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [busca, setBusca] = useState("");
   const [novoProduto, setNovoProduto] = useState({
-    nome: "",
-    quantidade: "",
-    valorUnitario: "",
+    name: "",
+    quantity: "",
+    unit_price: "",
+    supplier: ""
   });
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const produtosSalvos = localStorage.getItem('produtos');
-    if (produtosSalvos) {
-      setProdutos(JSON.parse(produtosSalvos));
-    }
+    fetchProdutos();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('produtos', JSON.stringify(produtos));
-  }, [produtos]);
-
-  const handleAdicionarProduto = () => {
-    if (!novoProduto.nome || !novoProduto.quantidade || !novoProduto.valorUnitario) return;
-
-    const produto: Produto = {
-      id: (produtos.length + 1).toString(),
-      nome: novoProduto.nome,
-      quantidade: Number(novoProduto.quantidade),
-      valorUnitario: Number(novoProduto.valorUnitario),
-    };
-
-    setProdutos([...produtos, produto]);
-    setNovoProduto({
-      nome: "",
-      quantidade: "",
-      valorUnitario: "",
-    });
+  const fetchProdutos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setProdutos(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os produtos.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleExcluirProduto = (id: string) => {
-    setProdutos(produtos.filter(p => p.id !== id));
+  const handleAdicionarProduto = async () => {
+    if (!novoProduto.name || !novoProduto.quantity || !novoProduto.unit_price) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{
+          name: novoProduto.name,
+          quantity: Number(novoProduto.quantity),
+          unit_price: Number(novoProduto.unit_price),
+          supplier: novoProduto.supplier || null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProdutos([...produtos, data]);
+      setNovoProduto({
+        name: "",
+        quantity: "",
+        unit_price: "",
+        supplier: ""
+      });
+
+      toast({
+        title: "Sucesso",
+        description: "Produto adicionado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar produto:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o produto.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSalvarEdicao = () => {
+  const handleExcluirProduto = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setProdutos(produtos.filter(p => p.id !== id));
+      toast({
+        title: "Sucesso",
+        description: "Produto excluído com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o produto.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleSalvarEdicao = async () => {
     if (!produtoEditando) return;
 
-    setProdutos(produtos.map(p => 
-      p.id === produtoEditando.id ? produtoEditando : p
-    ));
-    setProdutoEditando(null);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: produtoEditando.name,
+          quantity: produtoEditando.quantity,
+          unit_price: produtoEditando.unit_price,
+          supplier: produtoEditando.supplier
+        })
+        .eq('id', produtoEditando.id);
+
+      if (error) throw error;
+
+      setProdutos(produtos.map(p => 
+        p.id === produtoEditando.id ? produtoEditando : p
+      ));
+      setProdutoEditando(null);
+      
+      toast({
+        title: "Sucesso",
+        description: "Produto atualizado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o produto.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleQuantidadeChange = (id: string, delta: number) => {
-    setProdutos(produtos.map(produto => {
-      if (produto.id === id) {
-        const novaQuantidade = Math.max(0, produto.quantidade + delta);
-        return { ...produto, quantidade: novaQuantidade };
-      }
-      return produto;
-    }));
+  const handleQuantidadeChange = async (id: string, delta: number) => {
+    const produto = produtos.find(p => p.id === id);
+    if (!produto) return;
+
+    const novaQuantidade = Math.max(0, produto.quantity + delta);
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ quantity: novaQuantidade })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setProdutos(produtos.map(p => 
+        p.id === id ? { ...p, quantity: novaQuantidade } : p
+      ));
+    } catch (error) {
+      console.error('Erro ao atualizar quantidade:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a quantidade.",
+        variant: "destructive"
+      });
+    }
   };
 
   const produtosFiltrados = produtos.filter(produto =>
-    produto.nome.toLowerCase().includes(busca.toLowerCase())
+    produto.name.toLowerCase().includes(busca.toLowerCase())
   );
 
   const valorTotal = produtosFiltrados.reduce(
-    (total, produto) => total + (produto.quantidade * produto.valorUnitario),
+    (total, produto) => total + (produto.quantity * produto.unit_price),
     0
   );
 
@@ -102,26 +211,31 @@ export default function Estoque() {
       <Card className="p-6">
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Novo Produto</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Input
               placeholder="Nome do produto"
-              value={novoProduto.nome}
-              onChange={(e) => setNovoProduto({ ...novoProduto, nome: e.target.value })}
+              value={novoProduto.name}
+              onChange={(e) => setNovoProduto({ ...novoProduto, name: e.target.value })}
             />
             <Input
               placeholder="Quantidade"
               type="number"
               min="0"
-              value={novoProduto.quantidade}
-              onChange={(e) => setNovoProduto({ ...novoProduto, quantidade: e.target.value })}
+              value={novoProduto.quantity}
+              onChange={(e) => setNovoProduto({ ...novoProduto, quantity: e.target.value })}
             />
             <Input
               placeholder="Valor unitário"
               type="number"
               min="0"
               step="0.01"
-              value={novoProduto.valorUnitario}
-              onChange={(e) => setNovoProduto({ ...novoProduto, valorUnitario: e.target.value })}
+              value={novoProduto.unit_price}
+              onChange={(e) => setNovoProduto({ ...novoProduto, unit_price: e.target.value })}
+            />
+            <Input
+              placeholder="Fornecedor (opcional)"
+              value={novoProduto.supplier || ''}
+              onChange={(e) => setNovoProduto({ ...novoProduto, supplier: e.target.value })}
             />
           </div>
           <Button 
@@ -155,10 +269,15 @@ export default function Estoque() {
             <div className="flex flex-col space-y-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium">{produto.nome}</h3>
+                  <h3 className="font-medium">{produto.name}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Valor: {formatarMoeda(produto.valorUnitario)}
+                    Valor: {formatarMoeda(produto.unit_price)}
                   </p>
+                  {produto.supplier && (
+                    <p className="text-sm text-muted-foreground">
+                      Fornecedor: {produto.supplier}
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Sheet>
@@ -179,20 +298,20 @@ export default function Estoque() {
                         <div className="space-y-4 mt-4">
                           <Input
                             placeholder="Nome do produto"
-                            value={produtoEditando.nome}
+                            value={produtoEditando.name}
                             onChange={e => setProdutoEditando({
                               ...produtoEditando,
-                              nome: e.target.value
+                              name: e.target.value
                             })}
                           />
                           <Input
                             placeholder="Quantidade"
                             type="number"
                             min="0"
-                            value={produtoEditando.quantidade}
+                            value={produtoEditando.quantity}
                             onChange={e => setProdutoEditando({
                               ...produtoEditando,
-                              quantidade: Number(e.target.value)
+                              quantity: Number(e.target.value)
                             })}
                           />
                           <Input
@@ -200,10 +319,18 @@ export default function Estoque() {
                             type="number"
                             min="0"
                             step="0.01"
-                            value={produtoEditando.valorUnitario}
+                            value={produtoEditando.unit_price}
                             onChange={e => setProdutoEditando({
                               ...produtoEditando,
-                              valorUnitario: Number(e.target.value)
+                              unit_price: Number(e.target.value)
+                            })}
+                          />
+                          <Input
+                            placeholder="Fornecedor (opcional)"
+                            value={produtoEditando.supplier || ''}
+                            onChange={e => setProdutoEditando({
+                              ...produtoEditando,
+                              supplier: e.target.value
                             })}
                           />
                           <Button onClick={handleSalvarEdicao} className="w-full">
@@ -223,7 +350,7 @@ export default function Estoque() {
                 </div>
               </div>
               <div className="flex items-center justify-between border rounded-lg p-2">
-                <p className="text-sm">Total: {formatarMoeda(produto.quantidade * produto.valorUnitario)}</p>
+                <p className="text-sm">Total: {formatarMoeda(produto.quantity * produto.unit_price)}</p>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -232,7 +359,7 @@ export default function Estoque() {
                   >
                     <MinusIcon className="h-4 w-4" />
                   </Button>
-                  <span className="w-12 text-center">{produto.quantidade}</span>
+                  <span className="w-12 text-center">{produto.quantity}</span>
                   <Button
                     variant="outline"
                     size="icon"
