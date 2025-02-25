@@ -1,22 +1,61 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
 import { Target } from "lucide-react";
+
+// Import interfaces from other components to ensure type safety
+interface Venda {
+  id: string;
+  valor: number;
+  data: string;
+  arquivada?: boolean;
+}
+
+interface Cliente {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  aniversario: string;
+  classificacao: number;
+}
 
 export default function Dashboard() {
   const currentDate = new Date();
   const currentMonth = format(currentDate, 'MMMM yyyy', { locale: ptBR });
   
   const [metaDiaria, setMetaDiaria] = useState<number>(5000);
-  const [vendasDoDia, setVendasDoDia] = useState<number>(0);
-  const [totalClientes, setTotalClientes] = useState<number>(0);
-  const [vendasDoMes, setVendasDoMes] = useState<number>(0);
+  const [vendas, setVendas] = useState<Venda[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  
+  // Calcular vendas do dia
+  const vendasDoDia = vendas
+    .filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return format(dataVenda, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+    })
+    .reduce((total, venda) => total + venda.valor, 0);
 
+  // Calcular vendas do mês
+  const vendasDoMes = vendas
+    .filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return isWithinInterval(dataVenda, {
+        start: startOfMonth(currentDate),
+        end: endOfMonth(currentDate)
+      });
+    })
+    .reduce((total, venda) => total + venda.valor, 0);
+
+  // Total de clientes
+  const totalClientes = clientes.length;
+
+  // Calcular progresso da meta
   const progress = metaDiaria > 0 ? (vendasDoDia / metaDiaria) * 100 : 0;
 
   const handleDefinirMeta = (valor: number) => {
@@ -24,6 +63,20 @@ export default function Dashboard() {
       setMetaDiaria(valor);
     }
   };
+
+  // Carregar dados do localStorage
+  useEffect(() => {
+    const vendasSalvas = localStorage.getItem('vendas');
+    const clientesSalvos = localStorage.getItem('clientes');
+
+    if (vendasSalvas) {
+      setVendas(JSON.parse(vendasSalvas));
+    }
+
+    if (clientesSalvos) {
+      setClientes(JSON.parse(clientesSalvos));
+    }
+  }, []); // Executa apenas uma vez ao montar o componente
 
   return (
     <div className="space-y-6 animate-fadeIn">

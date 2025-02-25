@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ const clientesIniciais: Cliente[] = [
 ];
 
 export default function Clientes() {
-  const [clientes, setClientes] = useState<Cliente[]>(clientesIniciais);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteEditando, setClienteEditando] = useState<Cliente | null>(null);
   const [novoCliente, setNovoCliente] = useState<Partial<Cliente>>({
     nome: "",
@@ -42,6 +42,17 @@ export default function Clientes() {
     aniversario: "",
     classificacao: 0,
   });
+
+  useEffect(() => {
+    const storedClientes = localStorage.getItem('clientes');
+    if (storedClientes) {
+      setClientes(JSON.parse(storedClientes));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('clientes', JSON.stringify(clientes));
+  }, [clientes]);
 
   const handleRating = (clienteId: string, rating: number) => {
     setClientes(clientes.map(cliente => 

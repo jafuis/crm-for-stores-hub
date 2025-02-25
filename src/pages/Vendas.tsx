@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,21 +14,20 @@ interface Venda {
 }
 
 export default function Vendas() {
-  const [vendas, setVendas] = useState<Venda[]>([
-    {
-      id: "1",
-      valor: 5000,
-      data: "2024-02-24T09:03:00",
-      arquivada: false,
-    },
-  ]);
-
+  const [vendas, setVendas] = useState<Venda[]>([]);
   const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
 
   const [novaVenda, setNovaVenda] = useState({
     valor: "",
     data: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
   });
+
+  useEffect(() => {
+    const storedVendas = localStorage.getItem('vendas');
+    if (storedVendas) {
+      setVendas(JSON.parse(storedVendas));
+    }
+  }, []);
 
   const handleRegistrarVenda = () => {
     if (!novaVenda.valor) return;
