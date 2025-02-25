@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface Cliente {
   id: string;
@@ -78,69 +79,83 @@ export function AppSidebar() {
     window.open(url, '_blank');
   };
 
+  const renderSidebarContent = () => (
+    <SidebarContent className="bg-white h-full">
+      <div className="px-3 py-4 border-b">
+        <h1 className="text-xl font-bold text-primary">CRM PARA LOJAS</h1>
+      </div>
+      <SidebarGroup>
+        <SidebarGroupLabel>Menu</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) {
+                      setOpenMobile(false);
+                    }
+                  }}
+                  className={location.pathname === item.path ? "bg-secondary" : ""}
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+
+      {aniversariantes.length > 0 && (
+        <SidebarGroup>
+          <SidebarGroupLabel>Aniversários Hoje</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {aniversariantes.map((aniversariante) => (
+                <SidebarMenuItem key={aniversariante.id}>
+                  <SidebarMenuButton
+                    onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
+                  >
+                    <Gift className="w-5 h-5 text-pink-500" />
+                    <span>{aniversariante.nome}</span>
+                    <MessageSquare className="w-4 h-4 ml-auto text-pink-500" />
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      )}
+    </SidebarContent>
+  );
+
   return (
     <>
-      {isMobile && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="fixed top-4 left-4 z-50"
-          onClick={toggleMobileMenu}
-        >
-          <Menu className="h-6 w-6" />
-        </Button>
-      )}
-      <Sidebar>
-        <SidebarContent>
-          <div className="px-3 py-4">
-            <h1 className="text-xl font-bold text-primary">CRM PARA LOJAS</h1>
-          </div>
-          <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {menuItems.map((item) => (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      onClick={() => {
-                        navigate(item.path);
-                        if (isMobile) {
-                          setOpenMobile(false);
-                        }
-                      }}
-                      className={location.pathname === item.path ? "bg-secondary" : ""}
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-[100] md:hidden"
+        onClick={toggleMobileMenu}
+      >
+        <Menu className="h-6 w-6" />
+      </Button>
 
-          {aniversariantes.length > 0 && (
-            <SidebarGroup>
-              <SidebarGroupLabel>Aniversários Hoje</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {aniversariantes.map((aniversariante) => (
-                    <SidebarMenuItem key={aniversariante.id}>
-                      <SidebarMenuButton
-                        onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                      >
-                        <Gift className="w-5 h-5 text-pink-500" />
-                        <span>{aniversariante.nome}</span>
-                        <MessageSquare className="w-4 h-4 ml-auto text-pink-500" />
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          )}
-        </SidebarContent>
-      </Sidebar>
+      {isMobile ? (
+        <Sheet open={openMobile} onOpenChange={setOpenMobile}>
+          <SheetContent 
+            side="left" 
+            className="w-[280px] p-0 bg-white"
+          >
+            {renderSidebarContent()}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Sidebar className="hidden md:block">
+          {renderSidebarContent()}
+        </Sidebar>
+      )}
     </>
   );
 }
