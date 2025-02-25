@@ -6,9 +6,8 @@ import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target } from "lucide-react";
+import { Target, DollarSign, Users, Calendar } from "lucide-react";
 
-// Import interfaces from other components to ensure type safety
 interface Venda {
   id: string;
   valor: number;
@@ -61,6 +60,7 @@ export default function Dashboard() {
   const handleDefinirMeta = (valor: number) => {
     if (valor > 0) {
       setMetaDiaria(valor);
+      localStorage.setItem('metaDiaria', valor.toString());
     }
   };
 
@@ -68,6 +68,7 @@ export default function Dashboard() {
   useEffect(() => {
     const vendasSalvas = localStorage.getItem('vendas');
     const clientesSalvos = localStorage.getItem('clientes');
+    const metaSalva = localStorage.getItem('metaDiaria');
 
     if (vendasSalvas) {
       setVendas(JSON.parse(vendasSalvas));
@@ -75,6 +76,10 @@ export default function Dashboard() {
 
     if (clientesSalvos) {
       setClientes(JSON.parse(clientesSalvos));
+    }
+
+    if (metaSalva) {
+      setMetaDiaria(Number(metaSalva));
     }
   }, []); // Executa apenas uma vez ao montar o componente
 
@@ -86,7 +91,10 @@ export default function Dashboard() {
 
       <Card className="p-6">
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Total de Vendas</h2>
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-6 h-6 text-[#9b87f5]" />
+            <h2 className="text-lg font-semibold">Total de Vendas</h2>
+          </div>
           <div className="text-3xl font-bold">
             {vendasDoDia.toLocaleString('pt-BR', {
               style: 'currency',
@@ -98,7 +106,7 @@ export default function Dashboard() {
               <span>Meta Diária</span>
               <span>{progress.toFixed(1)}%</span>
             </div>
-            <Progress value={progress} />
+            <Progress value={progress} className="bg-gray-200" />
             <div className="flex justify-between text-sm">
               <span>R$ {vendasDoDia.toLocaleString()}</span>
               <span>R$ {metaDiaria.toLocaleString()}</span>
@@ -122,12 +130,18 @@ export default function Dashboard() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card className="p-6">
-          <h3 className="text-sm font-medium text-gray-500">Total de Clientes</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Users className="w-5 h-5 text-[#9b87f5]" />
+            <h3 className="text-sm font-medium text-gray-500">Total de Clientes</h3>
+          </div>
           <p className="text-2xl font-bold mt-2">{totalClientes}</p>
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-sm font-medium text-gray-500">Vendas do Mês</h3>
+          <div className="flex items-center gap-2 mb-4">
+            <Calendar className="w-5 h-5 text-[#9b87f5]" />
+            <h3 className="text-sm font-medium text-gray-500">Vendas do Mês</h3>
+          </div>
           <p className="text-2xl font-bold mt-2">
             {vendasDoMes.toLocaleString('pt-BR', {
               style: 'currency',

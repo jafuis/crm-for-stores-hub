@@ -39,7 +39,10 @@ export default function Vendas() {
       arquivada: false,
     };
 
-    setVendas([venda, ...vendas]);
+    const novasVendas = [venda, ...vendas];
+    setVendas(novasVendas);
+    localStorage.setItem('vendas', JSON.stringify(novasVendas));
+
     setNovaVenda({
       valor: "",
       data: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
@@ -47,15 +50,19 @@ export default function Vendas() {
   };
 
   const handleArquivarVenda = (id: string) => {
-    setVendas(vendas.map(venda => 
+    const vendasAtualizadas = vendas.map(venda => 
       venda.id === id 
         ? { ...venda, arquivada: !venda.arquivada }
         : venda
-    ));
+    );
+    setVendas(vendasAtualizadas);
+    localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
   };
 
   const handleExcluirVenda = (id: string) => {
-    setVendas(vendas.filter(venda => venda.id !== id));
+    const vendasAtualizadas = vendas.filter(venda => venda.id !== id);
+    setVendas(vendasAtualizadas);
+    localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
   };
 
   const formatarValor = (valor: number) => {
