@@ -11,6 +11,7 @@ import {
   Menu,
   Gift,
   MessageSquare,
+  PartyPopper,
 } from "lucide-react";
 import {
   Sidebar,
@@ -45,6 +46,7 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
+  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
 
@@ -56,7 +58,6 @@ export function AppSidebar() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
 
   useEffect(() => {
-    // Carregar aniversariantes do dia
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
@@ -71,12 +72,6 @@ export function AppSidebar() {
 
   const toggleMobileMenu = () => {
     setOpenMobile(!openMobile);
-  };
-
-  const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
-    const mensagem = `Feliz aniversário, ${nome}! 🎉`;
-    const url = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
-    window.open(url, '_blank');
   };
 
   const renderSidebarContent = () => (
@@ -101,33 +96,15 @@ export function AppSidebar() {
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.title}</span>
+                  {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
+                    <PartyPopper className="w-5 h-5 ml-2 text-pink-500 animate-bounce" />
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-
-      {aniversariantes.length > 0 && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Aniversários Hoje</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {aniversariantes.map((aniversariante) => (
-                <SidebarMenuItem key={aniversariante.id}>
-                  <SidebarMenuButton
-                    onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                  >
-                    <Gift className="w-5 h-5 text-pink-500" />
-                    <span>{aniversariante.nome}</span>
-                    <MessageSquare className="w-4 h-4 ml-auto text-pink-500" />
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
     </SidebarContent>
   );
 
