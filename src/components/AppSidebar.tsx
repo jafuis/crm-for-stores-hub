@@ -31,7 +31,6 @@ import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface Cliente {
   id: string;
@@ -59,7 +58,6 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const { toast } = useToast();
-  const { profile, signOut } = useAuth();
 
   useEffect(() => {
     const clientesSalvos = localStorage.getItem('clientes');
@@ -78,31 +76,12 @@ export function AppSidebar() {
     setOpenMobile(!openMobile);
   };
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      navigate("/auth/signin");
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao sair",
-        description: "Não foi possível fazer logout",
-      });
-    }
-  };
-
   const renderSidebarContent = () => (
-    <SidebarContent className="bg-white h-full flex flex-col">
+    <SidebarContent className="bg-white h-full">
       <div className="px-3 py-4 border-b">
         <h1 className="text-xl font-bold text-primary">CRM PARA LOJAS</h1>
-        {profile && (
-          <div className="mt-2 text-sm text-gray-600">
-            <p className="font-medium">{profile.name}</p>
-            <p className="text-xs">{profile.area}</p>
-          </div>
-        )}
       </div>
-      <SidebarGroup className="flex-1">
+      <SidebarGroup>
         <SidebarGroupLabel>Menu</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
@@ -128,15 +107,6 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-      <div className="p-4 border-t">
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={handleLogout}
-        >
-          Sair
-        </Button>
-      </div>
     </SidebarContent>
   );
 
