@@ -152,6 +152,16 @@ export default function Configuracoes() {
       startY: 25,
       theme: 'striped',
       headStyles: { fillColor: [155, 135, 245] },
+      styles: {
+        cellPadding: 3,
+        fontSize: 10
+      },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 30, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 60 }
+      },
       didDrawPage: function(data) {
         finalY = data.cursor.y;
       }
@@ -166,6 +176,21 @@ export default function Configuracoes() {
       14,
       finalY + 10
     );
+
+    const dataHora = format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+    doc.text(`Relatório gerado em: ${dataHora}`, 14, finalY + 20);
+    
+    const pageCount = doc.getNumberOfPages();
+    for(let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.text(
+        `Página ${i} de ${pageCount}`,
+        doc.internal.pageSize.getWidth() / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
+    }
     
     doc.save(`relatorio-estoque-${format(new Date(), 'dd-MM-yyyy')}.pdf`);
   };
