@@ -64,17 +64,9 @@ export default function Aniversariantes() {
 
   return (
     <div className="space-y-6 animate-fadeIn pt-16">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Aniversariantes do Dia</h1>
-          <p className="text-muted-foreground">Celebre com seus clientes!</p>
-        </div>
-        <Button 
-          variant="outline"
-          onClick={() => navigate('/clientes')}
-        >
-          Gerenciar Clientes
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold">Aniversariantes do Dia</h1>
+        <p className="text-muted-foreground">Celebre com seus clientes!</p>
       </div>
 
       {aniversariantes.length > 0 ? (
@@ -109,13 +101,6 @@ export default function Aniversariantes() {
           <div className="text-center text-gray-500">
             <Gift className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             <p>Nenhum aniversariante hoje!</p>
-            <Button 
-              variant="link" 
-              className="mt-2"
-              onClick={() => navigate('/clientes')}
-            >
-              Cadastrar novos clientes
-            </Button>
           </div>
         </Card>
       )}

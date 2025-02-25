@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -128,14 +127,12 @@ export default function Clientes() {
 
   return (
     <div className="space-y-6 animate-fadeIn pt-16">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground">Gerencie seus clientes</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Clientes</h1>
+        <p className="text-muted-foreground">Gerencie seus clientes</p>
         <Sheet>
           <SheetTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
+            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] mt-4">
               <UserPlus className="w-4 h-4 mr-2" />
               Novo Cliente
             </Button>
