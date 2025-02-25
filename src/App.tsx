@@ -2,6 +2,8 @@
 import "./App.css";
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
+import { AuthProvider } from "./contexts/AuthContext";
+import { AuthRequired } from "./components/AuthRequired";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
 import Vendas from "./pages/Vendas";
@@ -12,14 +14,18 @@ import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Aniversariantes from "./pages/Aniversariantes";
+import SignIn from "./pages/auth/SignIn";
+import SignUp from "./pages/auth/SignUp";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: (
-      <AppLayout>
-        <Outlet />
-      </AppLayout>
+      <AuthRequired>
+        <AppLayout>
+          <Outlet />
+        </AppLayout>
+      </AuthRequired>
     ),
     errorElement: <NotFound />,
     children: [
@@ -59,16 +65,33 @@ const router = createBrowserRouter([
         path: "configuracoes",
         element: <Configuracoes />,
       },
+    ],
+  },
+  {
+    path: "auth",
+    children: [
       {
-        path: "*",
-        element: <Navigate to="/" replace />,
+        path: "signin",
+        element: <SignIn />,
+      },
+      {
+        path: "signup",
+        element: <SignUp />,
       },
     ],
+  },
+  {
+    path: "*",
+    element: <Navigate to="/" replace />,
   },
 ]);
 
 function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }
 
 export default App;
