@@ -70,11 +70,15 @@ export default function Tarefas() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Tarefas</h1>
-          <p className="text-muted-foreground">Gerencie suas tarefas</p>
-        </div>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Tarefas</h1>
+        <Button 
+          className="bg-[#9b87f5] hover:bg-[#7e69ab]"
+          onClick={() => document.getElementById('novaTarefaForm')?.focus()}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nova Tarefa
+        </Button>
       </div>
 
       <Card className="p-6">
@@ -82,6 +86,7 @@ export default function Tarefas() {
           <h2 className="text-lg font-semibold">Nova Tarefa</h2>
           <div className="flex gap-4">
             <Input
+              id="novaTarefaForm"
               placeholder="Título da tarefa"
               value={novaTarefa.titulo}
               onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })}
