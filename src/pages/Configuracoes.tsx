@@ -144,11 +144,26 @@ export default function Configuracoes() {
       produto.fornecedor || 'N/A'
     ]);
 
+    let finalY = 25;
+
     autoTable(doc, {
       head: [["Produto", "Quantidade", "Preço", "Fornecedor"]],
       body: dados,
       startY: 25,
+      didDrawPage: function(data) {
+        finalY = data.cursor.y;
+      }
     });
+
+    const valorTotalEstoque = produtos.reduce((total, produto) => 
+      total + (produto.preco * produto.quantidade), 0
+    );
+
+    doc.text(
+      `Valor Total em Estoque: ${valorTotalEstoque.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+      14,
+      finalY + 10
+    );
     
     doc.save('relatorio-estoque.pdf');
   };
