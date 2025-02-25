@@ -1,6 +1,6 @@
 
 import "./App.css";
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
@@ -58,6 +58,10 @@ const router = createBrowserRouter([
       {
         path: "configuracoes",
         element: <Configuracoes />,
+      },
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
       },
     ],
   },
