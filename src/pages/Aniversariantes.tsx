@@ -48,7 +48,6 @@ export default function Aniversariantes() {
 
     carregarAniversariantes();
 
-    // Atualiza a lista quando houver mudanças nos clientes
     window.addEventListener('storage', carregarAniversariantes);
 
     return () => {
@@ -68,14 +67,6 @@ export default function Aniversariantes() {
     });
   };
 
-  const formatarData = (data: string) => {
-    return format(new Date(data), "dd 'de' MMMM", { locale: ptBR });
-  };
-
-  const alternarOrdenacao = () => {
-    setOrdenacao(prev => prev === 'asc' ? 'desc' : 'asc');
-  };
-
   return (
     <div className="space-y-6 animate-fadeIn pt-16">
       <div className="flex justify-between items-center">
@@ -85,7 +76,7 @@ export default function Aniversariantes() {
         </div>
         <Button
           variant="outline"
-          onClick={alternarOrdenacao}
+          onClick={() => setOrdenacao(prev => prev === 'asc' ? 'desc' : 'asc')}
           className="flex items-center gap-2"
         >
           {ordenacao === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
@@ -104,7 +95,7 @@ export default function Aniversariantes() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">{aniversariante.nome}</h3>
-                    <p className="text-sm text-gray-500">{formatarData(aniversariante.aniversario)}</p>
+                    <p className="text-sm font-bold text-pink-500">HOJE!🎉</p>
                     {aniversariante.telefone && (
                       <p className="text-sm text-gray-500">{aniversariante.telefone}</p>
                     )}

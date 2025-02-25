@@ -1,7 +1,6 @@
-
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileDown, Users, DollarSign, Truck, CheckSquare } from "lucide-react";
+import { FileDown, Users, DollarSign, Truck, CheckSquare, Package } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { format } from "date-fns";
@@ -30,6 +29,14 @@ interface Fornecedor {
   email: string;
   endereco: string;
   produtos: string;
+}
+
+interface Produto {
+  id: string;
+  nome: string;
+  quantidade: number;
+  preco: number;
+  fornecedor?: string;
 }
 
 interface Tarefa {
@@ -75,6 +82,75 @@ export default function Configuracoes() {
     );
     
     doc.save('relatorio-vendas.pdf');
+  };
+
+  const gerarRelatorioVendasDiarias = () => {
+    const vendas: Venda[] = JSON.parse(localStorage.getItem('vendas') || '[]');
+    const doc = new jsPDF();
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Vendas do Dia", 14, 15);
+    doc.setFont("helvetica", "normal");
+    
+    const hoje = new Date();
+    const vendasHoje = vendas.filter(venda => {
+      const dataVenda = new Date(venda.data);
+      return (
+        dataVenda.getDate() === hoje.getDate() &&
+        dataVenda.getMonth() === hoje.getMonth() &&
+        dataVenda.getFullYear() === hoje.getFullYear()
+      );
+    });
+    
+    const totalVendasDia = vendasHoje.reduce((acc, v) => acc + v.valor, 0);
+    
+    const dados = vendasHoje.map(venda => [
+      format(new Date(venda.data), "HH:mm", { locale: ptBR }),
+      venda.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    ]);
+
+    let finalY = 25;
+
+    autoTable(doc, {
+      head: [["Hora", "Valor"]],
+      body: dados,
+      startY: 25,
+      didDrawPage: function(data) {
+        finalY = data.cursor.y;
+      }
+    });
+
+    doc.text(
+      `Total de Vendas do Dia: ${totalVendasDia.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+      14,
+      finalY + 10
+    );
+    
+    doc.save('relatorio-vendas-diarias.pdf');
+  };
+
+  const gerarRelatorioEstoque = () => {
+    const produtos: Produto[] = JSON.parse(localStorage.getItem('produtos') || '[]');
+    const doc = new jsPDF();
+    
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Estoque", 14, 15);
+    doc.setFont("helvetica", "normal");
+    
+    const dados = produtos.map(produto => [
+      produto.nome,
+      produto.quantidade.toString(),
+      produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      produto.fornecedor || 'N/A'
+    ]);
+
+    autoTable(doc, {
+      head: [["Produto", "Quantidade", "Preço", "Fornecedor"]],
+      body: dados,
+      startY: 25,
+    });
+    
+    doc.save('relatorio-estoque.pdf');
   };
 
   const gerarRelatorioClientes = () => {
@@ -170,6 +246,34 @@ export default function Configuracoes() {
             <div className="text-left">
               <div className="font-semibold">Relatório de Vendas</div>
               <div className="text-sm text-gray-500">Exportar histórico de vendas</div>
+            </div>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="flex items-center justify-start gap-2 h-auto py-4"
+            onClick={gerarRelatorioVendasDiarias}
+          >
+            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <DollarSign className="w-5 h-5 text-green-500" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Relatório de Vendas do Dia</div>
+              <div className="text-sm text-gray-500">Exportar vendas de hoje</div>
+            </div>
+          </Button>
+
+          <Button
+            variant="outline"
+            className="flex items-center justify-start gap-2 h-auto py-4"
+            onClick={gerarRelatorioEstoque}
+          >
+            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+              <Package className="w-5 h-5 text-blue-500" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Relatório de Estoque</div>
+              <div className="text-sm text-gray-500">Exportar lista de produtos</div>
             </div>
           </Button>
 
