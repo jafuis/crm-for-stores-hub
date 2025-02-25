@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, UserPlus, Star, Trash2, Mail, Phone } from "lucide-react";
+import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar } from "lucide-react";
 
 interface Cliente {
   id: string;
