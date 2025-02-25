@@ -150,6 +150,8 @@ export default function Configuracoes() {
       head: [["Produto", "Quantidade", "Preço", "Fornecedor"]],
       body: dados,
       startY: 25,
+      theme: 'striped',
+      headStyles: { fillColor: [155, 135, 245] },
       didDrawPage: function(data) {
         finalY = data.cursor.y;
       }
@@ -165,7 +167,7 @@ export default function Configuracoes() {
       finalY + 10
     );
     
-    doc.save('relatorio-estoque.pdf');
+    doc.save(`relatorio-estoque-${format(new Date(), 'dd-MM-yyyy')}.pdf`);
   };
 
   const gerarRelatorioClientes = () => {
