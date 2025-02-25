@@ -79,11 +79,11 @@ export default function Fornecedores() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4">
         <h1 className="text-2xl font-bold">Fornecedores</h1>
         <Sheet>
           <SheetTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
+            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto">
               <Truck className="w-4 h-4 mr-2" />
               Adicionar Fornecedor
             </Button>
@@ -144,7 +144,7 @@ export default function Fornecedores() {
               key={fornecedor.id}
               className="flex flex-col space-y-4 p-4 border rounded-lg"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                 <div>
                   <h3 className="font-medium">{fornecedor.nome}</h3>
                   <p className="text-sm text-muted-foreground">
@@ -225,7 +225,7 @@ export default function Fornecedores() {
                   </Button>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+              <div className="flex flex-col md:grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Phone className="h-4 w-4" />
                   <a
