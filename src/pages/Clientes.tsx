@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar } from "lucide-react";
+import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface Cliente {
   id: string;
@@ -18,6 +19,7 @@ interface Cliente {
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [busca, setBusca] = useState("");
+  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
   const [novoCliente, setNovoCliente] = useState({
     nome: "",
     telefone: "",
@@ -41,14 +43,21 @@ export default function Clientes() {
     if (!novoCliente.nome || !novoCliente.telefone || !novoCliente.email) return;
 
     const cliente: Cliente = {
-      id: (clientes.length + 1).toString(),
+      id: editingClient ? editingClient.id : Date.now().toString(),
       ...novoCliente
     };
 
-    const novosClientes = [...clientes, cliente];
-    setClientes(novosClientes);
-    localStorage.setItem('clientes', JSON.stringify(novosClientes));
+    let novosClientes;
+    if (editingClient) {
+      novosClientes = clientes.map(c => c.id === editingClient.id ? cliente : c);
+    } else {
+      novosClientes = [...clientes, cliente];
+    }
 
+    // Ordenar por ordem alfabética
+    novosClientes.sort((a, b) => a.nome.localeCompare(b.nome));
+
+    setClientes(novosClientes);
     setNovoCliente({
       nome: "",
       telefone: "",
@@ -56,13 +65,57 @@ export default function Clientes() {
       aniversario: "",
       classificacao: 1,
     });
+    setEditingClient(null);
   };
 
-  const clientesFiltrados = clientes.filter(cliente =>
-    cliente.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    cliente.email.toLowerCase().includes(busca.toLowerCase()) ||
-    cliente.telefone.includes(busca)
-  );
+  const handleExcluirCliente = (id: string) => {
+    const novosClientes = clientes.filter(cliente => cliente.id !== id);
+    setClientes(novosClientes);
+  };
+
+  const handleEditarCliente = (cliente: Cliente) => {
+    setEditingClient(cliente);
+    setNovoCliente({
+      nome: cliente.nome,
+      telefone: cliente.telefone,
+      email: cliente.email,
+      aniversario: cliente.aniversario,
+      classificacao: cliente.classificacao,
+    });
+  };
+
+  const handleStarClick = (clienteId: string, novaClassificacao: number) => {
+    const novosClientes = clientes.map(cliente => {
+      if (cliente.id === clienteId) {
+        return { ...cliente, classificacao: novaClassificacao };
+      }
+      return cliente;
+    });
+    setClientes(novosClientes);
+  };
+
+  const clientesFiltrados = clientes
+    .filter(cliente =>
+      cliente.nome.toLowerCase().includes(busca.toLowerCase()) ||
+      cliente.email.toLowerCase().includes(busca.toLowerCase()) ||
+      cliente.telefone.includes(busca)
+    )
+    .sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const StarRating = ({ value, onChange, readOnly = false }: { value: number, onChange?: (rating: number) => void, readOnly?: boolean }) => {
+    return (
+      <div className="flex">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`w-5 h-5 ${star <= value ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
+              ${!readOnly && "cursor-pointer hover:text-yellow-400"}`}
+            onClick={() => !readOnly && onChange && onChange(star)}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -75,12 +128,12 @@ export default function Clientes() {
           <SheetTrigger asChild>
             <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
               <UserPlus className="w-4 h-4 mr-2" />
-              Novo Cliente
+              {editingClient ? "Editar Cliente" : "Novo Cliente"}
             </Button>
           </SheetTrigger>
           <SheetContent>
             <SheetHeader>
-              <SheetTitle>Adicionar Novo Cliente</SheetTitle>
+              <SheetTitle>{editingClient ? "Editar Cliente" : "Adicionar Novo Cliente"}</SheetTitle>
             </SheetHeader>
             <div className="space-y-4 mt-4">
               <div>
@@ -114,63 +167,81 @@ export default function Clientes() {
                 />
               </div>
               <div>
-                <Input
-                  type="number"
-                  placeholder="Classificação (1-5)"
-                  min="1"
-                  max="5"
+                <p className="mb-2 text-sm text-gray-600">Classificação</p>
+                <StarRating
                   value={novoCliente.classificacao}
-                  onChange={(e) => setNovoCliente({ ...novoCliente, classificacao: Number(e.target.value) })}
+                  onChange={(rating) => setNovoCliente({ ...novoCliente, classificacao: rating })}
                 />
               </div>
               <Button 
                 className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
                 onClick={handleAdicionarCliente}
               >
-                Adicionar Cliente
+                {editingClient ? "Salvar Alterações" : "Adicionar Cliente"}
               </Button>
             </div>
           </SheetContent>
         </Sheet>
       </div>
 
-      <div className="flex flex-col md:flex-row justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-          <Input
-            placeholder="Buscar clientes..."
-            className="pl-10 w-full"
-            value={busca}
-            onChange={(e) => setBusca(e.target.value)}
-          />
-        </div>
+      <div className="relative">
+        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+        <Input
+          placeholder="Buscar clientes..."
+          className="pl-10 w-full"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <Accordion type="single" collapsible className="w-full space-y-2">
         {clientesFiltrados.map((cliente) => (
-          <Card key={cliente.id} className="p-4">
-            <div className="flex flex-col space-y-2">
-              <div className="text-lg font-semibold">{cliente.nome}</div>
-              <div className="text-sm text-gray-500">
-                <Mail className="w-4 h-4 inline-block mr-1" />
-                {cliente.email}
+          <AccordionItem key={cliente.id} value={cliente.id} className="border rounded-lg p-2">
+            <AccordionTrigger className="hover:no-underline">
+              <div className="flex items-center justify-between w-full pr-4">
+                <div className="flex items-center gap-4">
+                  <div className="font-semibold">{cliente.nome}</div>
+                  <StarRating value={cliente.classificacao} readOnly />
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                <Phone className="w-4 h-4 inline-block mr-1" />
-                {cliente.telefone}
+            </AccordionTrigger>
+            <AccordionContent>
+              <div className="space-y-2 pt-2">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Mail className="w-4 h-4" />
+                  {cliente.email}
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Phone className="w-4 h-4" />
+                  {cliente.telefone}
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Calendar className="w-4 h-4" />
+                  {cliente.aniversario}
+                </div>
+                <div className="flex items-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEditarCliente(cliente)}
+                  >
+                    <Edit2 className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleExcluirCliente(cliente.id)}
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </Button>
+                </div>
               </div>
-              <div className="text-sm text-gray-500">
-                <Star className="w-4 h-4 inline-block mr-1" />
-                Classificação: {cliente.classificacao}
-              </div>
-              <div className="text-sm text-gray-500">
-                <Calendar className="w-4 h-4 inline-block mr-1" />
-                Aniversário: {cliente.aniversario}
-              </div>
-            </div>
-          </Card>
+            </AccordionContent>
+          </AccordionItem>
         ))}
-      </div>
+      </Accordion>
     </div>
   );
 }
