@@ -57,13 +57,17 @@ export default function Configuracoes() {
       venda.arquivada ? "Sim" : "Não"
     ]);
 
-    autoTable(doc, {
+    const finalY = autoTable(doc, {
       head: [["Data", "Valor", "Arquivada"]],
       body: dados,
       startY: 25,
-    });
+    }).finalY || 25;
 
-    doc.text(`Total de Vendas: ${totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`, 14, doc.lastAutoTable.finalY + 10);
+    doc.text(
+      `Total de Vendas: ${totalVendas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`,
+      14,
+      finalY + 10
+    );
     
     doc.save('relatorio-vendas.pdf');
   };
