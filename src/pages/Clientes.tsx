@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp, Gift } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
@@ -125,6 +125,16 @@ export default function Clientes() {
     );
   };
 
+  const isAniversariante = (cliente: Cliente) => {
+    if (!cliente.aniversario) return false;
+    const hoje = new Date();
+    const aniversario = new Date(cliente.aniversario);
+    return isSameDay(
+      new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+      new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn pt-16">
       <div>
@@ -202,11 +212,20 @@ export default function Clientes() {
 
       <Accordion type="single" collapsible className="w-full space-y-2">
         {clientesFiltrados.map((cliente) => (
-          <AccordionItem key={cliente.id} value={cliente.id} className="border rounded-lg p-2">
+          <AccordionItem 
+            key={cliente.id} 
+            value={cliente.id} 
+            className={`border rounded-lg p-2 ${isAniversariante(cliente) ? 'bg-pink-50 border-pink-200' : ''}`}
+          >
             <AccordionTrigger className="hover:no-underline">
               <div className="flex items-center justify-between w-full pr-4">
                 <div className="flex items-center gap-4">
-                  <div className="font-semibold">{cliente.nome}</div>
+                  <div className="font-semibold flex items-center gap-2">
+                    {cliente.nome}
+                    {isAniversariante(cliente) && (
+                      <Gift className="w-4 h-4 text-pink-500 animate-bounce" />
+                    )}
+                  </div>
                   <StarRating 
                     value={cliente.classificacao} 
                     onChange={(rating) => handleStarClick(cliente.id, rating)}
