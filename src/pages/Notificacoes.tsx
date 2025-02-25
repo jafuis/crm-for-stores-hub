@@ -55,7 +55,7 @@ export default function Notificacoes() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col gap-4">
+      <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Notificações</h1>
       </div>
 

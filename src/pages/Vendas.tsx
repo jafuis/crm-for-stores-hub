@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Calendar, FileText, Archive, Trash2, RefreshCcw, Plus } from "lucide-react";
+import { DollarSign, Calendar, FileText, Archive, Trash2, RefreshCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface Venda {
@@ -106,18 +107,45 @@ export default function Vendas() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold">Vendas</h1>
-        <Card className="p-6">
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Meta Diária</h2>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
-              <Plus className="w-4 h-4 mr-2" />
-              Definir Meta
-            </Button>
-          </div>
-        </Card>
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-bold">Controle de Vendas</h1>
+        <p className="text-muted-foreground">
+          Registre e gerencie suas vendas
+        </p>
       </div>
+
+      <Card className="p-6 space-y-6">
+        <div className="grid gap-4">
+          <div className="relative">
+            <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Valor da venda"
+              type="number"
+              step="0.01"
+              min="0"
+              className="pl-10"
+              value={novaVenda.valor}
+              onChange={(e) => setNovaVenda({ ...novaVenda, valor: e.target.value })}
+            />
+          </div>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+            <Input
+              type="datetime-local"
+              className="pl-10"
+              value={novaVenda.data}
+              onChange={(e) => setNovaVenda({ ...novaVenda, data: e.target.value })}
+            />
+          </div>
+          <Button
+            className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
+            onClick={handleRegistrarVenda}
+          >
+            <FileText className="w-4 h-4 mr-2" />
+            Registrar Venda
+          </Button>
+        </div>
+      </Card>
 
       <div className="flex justify-end">
         <Button 
