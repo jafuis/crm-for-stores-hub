@@ -33,4 +33,4 @@ export default function AuthRequired({ children }: { children: React.ReactNode }
   }
 
   return <>{children}</>;
-};
+}
