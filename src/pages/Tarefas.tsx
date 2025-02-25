@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -70,39 +69,35 @@ export default function Tarefas() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Tarefas</h1>
-          <p className="text-muted-foreground">Gerencie suas tarefas</p>
-        </div>
-      </div>
-
-      <Card className="p-6">
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Nova Tarefa</h2>
-          <div className="flex gap-4">
-            <Input
-              placeholder="Título da tarefa"
-              value={novaTarefa.titulo}
-              onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })}
-              className="flex-1"
-            />
-            <Input
-              type="date"
-              value={novaTarefa.dataVencimento}
-              onChange={(e) => setNovaTarefa({ ...novaTarefa, dataVencimento: e.target.value })}
-              className="w-auto"
-            />
-            <Button 
-              className="bg-[#9b87f5] hover:bg-[#7e69ab]"
-              onClick={handleAdicionarTarefa}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar
-            </Button>
+      <div className="flex flex-col gap-4">
+        <h1 className="text-2xl font-bold">Tarefas</h1>
+        <Card className="p-6">
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Nova Tarefa</h2>
+            <div className="flex gap-4">
+              <Input
+                placeholder="Título da tarefa"
+                value={novaTarefa.titulo}
+                onChange={(e) => setNovaTarefa({ ...novaTarefa, titulo: e.target.value })}
+                className="flex-1"
+              />
+              <Input
+                type="date"
+                value={novaTarefa.dataVencimento}
+                onChange={(e) => setNovaTarefa({ ...novaTarefa, dataVencimento: e.target.value })}
+                className="w-auto"
+              />
+              <Button 
+                className="bg-[#9b87f5] hover:bg-[#7e69ab]"
+                onClick={handleAdicionarTarefa}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar
+              </Button>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
       <div className="space-y-4">
         {tarefas.map((tarefa) => (
