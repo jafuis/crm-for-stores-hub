@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,17 +15,7 @@ interface Fornecedor {
 }
 
 export default function Fornecedores() {
-  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([
-    {
-      id: "1",
-      nome: "Juraez Gonzales",
-      telefone: "19987156242",
-      email: "jsfuix@hotmail.com",
-      endereco: "Prestes Maia 506",
-      produtos: "ROUPAS",
-    }
-  ]);
-
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [busca, setBusca] = useState("");
   const [fornecedorEditando, setFornecedorEditando] = useState<Fornecedor | null>(null);
   const [novoFornecedor, setNovoFornecedor] = useState<Partial<Fornecedor>>({

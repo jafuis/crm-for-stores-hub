@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Gift, MessageSquare, SortAsc, SortDesc } from "lucide-react";
 import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface Cliente {
   id: string;
@@ -68,8 +68,8 @@ export default function Aniversariantes() {
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pt-16">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 animate-fadeIn px-4 md:px-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Aniversariantes do Dia</h1>
           <p className="text-muted-foreground">Celebre com seus clientes!</p>
@@ -77,7 +77,7 @@ export default function Aniversariantes() {
         <Button
           variant="outline"
           onClick={() => setOrdenacao(prev => prev === 'asc' ? 'desc' : 'asc')}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 w-full md:w-auto"
         >
           {ordenacao === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
           Ordenar por nome
@@ -87,17 +87,17 @@ export default function Aniversariantes() {
       {aniversariantes.length > 0 ? (
         <div className="grid gap-4">
           {aniversariantes.map((aniversariante) => (
-            <Card key={aniversariante.id} className="p-6 border-l-4 border-l-pink-500">
-              <div className="flex items-center justify-between">
+            <Card key={aniversariante.id} className="p-4 md:p-6 border-l-4 border-l-pink-500">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center animate-bounce">
+                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center animate-bounce shrink-0">
                     <Gift className="w-6 h-6 text-pink-500" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">{aniversariante.nome}</h3>
                     <p className="text-sm font-bold text-pink-500">HOJE!🎉</p>
                     {aniversariante.telefone && (
-                      <p className="text-sm text-gray-500">{aniversariante.telefone}</p>
+                      <p className="text-sm text-gray-500 break-words">{aniversariante.telefone}</p>
                     )}
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export default function Aniversariantes() {
                   <Button
                     variant="outline"
                     onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                    className="text-pink-500 border-pink-200 hover:bg-pink-50"
+                    className="text-pink-500 border-pink-200 hover:bg-pink-50 w-full md:w-auto"
                   >
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Enviar Mensagem

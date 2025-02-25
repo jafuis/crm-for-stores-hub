@@ -17,6 +17,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          owner_id: string | null
           phone: string | null
         }
         Insert: {
@@ -26,6 +27,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           phone?: string | null
         }
         Update: {
@@ -35,6 +37,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           phone?: string | null
         }
         Relationships: []
@@ -44,6 +47,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          owner_id: string | null
           quantity: number
           supplier: string | null
           unit_price: number
@@ -52,6 +56,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          owner_id?: string | null
           quantity?: number
           supplier?: string | null
           unit_price: number
@@ -60,9 +65,34 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          owner_id?: string | null
           quantity?: number
           supplier?: string | null
           unit_price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          area: string
+          created_at: string | null
+          id: string
+          name: string | null
+          role: string | null
+        }
+        Insert: {
+          area: string
+          created_at?: string | null
+          id: string
+          name?: string | null
+          role?: string | null
+        }
+        Update: {
+          area?: string
+          created_at?: string | null
+          id?: string
+          name?: string | null
+          role?: string | null
         }
         Relationships: []
       }
@@ -110,6 +140,7 @@ export type Database = {
           created_at: string
           customer_id: string | null
           id: string
+          owner_id: string | null
           payment_method: string | null
           status: string | null
           total_amount: number
@@ -118,6 +149,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           id?: string
+          owner_id?: string | null
           payment_method?: string | null
           status?: string | null
           total_amount: number
@@ -126,6 +158,7 @@ export type Database = {
           created_at?: string
           customer_id?: string | null
           id?: string
+          owner_id?: string | null
           payment_method?: string | null
           status?: string | null
           total_amount?: number
@@ -162,6 +195,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          owner_id: string | null
           phone: string | null
         }
         Insert: {
@@ -170,6 +204,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          owner_id?: string | null
           phone?: string | null
         }
         Update: {
@@ -178,6 +213,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
           phone?: string | null
         }
         Relationships: []
@@ -188,6 +224,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          owner_id: string | null
           priority: string | null
           status: string | null
           title: string
@@ -197,6 +234,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          owner_id?: string | null
           priority?: string | null
           status?: string | null
           title: string
@@ -206,6 +244,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          owner_id?: string | null
           priority?: string | null
           status?: string | null
           title?: string
