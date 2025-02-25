@@ -308,20 +308,6 @@ export default function Configuracoes() {
           <Button
             variant="outline"
             className="flex items-center justify-start gap-2 h-auto py-4"
-            onClick={gerarRelatorioEstoque}
-          >
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <Package className="w-5 h-5 text-blue-500" />
-            </div>
-            <div className="text-left">
-              <div className="font-semibold">Relatório de Estoque</div>
-              <div className="text-sm text-gray-500">Exportar lista de produtos</div>
-            </div>
-          </Button>
-
-          <Button
-            variant="outline"
-            className="flex items-center justify-start gap-2 h-auto py-4"
             onClick={gerarRelatorioClientes}
           >
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
