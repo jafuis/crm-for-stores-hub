@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Calendar, FileText, Archive, Trash2 } from "lucide-react";
+import { DollarSign, Calendar, FileText, Archive, Trash2, RefreshCcw } from "lucide-react";
 
 interface Venda {
   id: string;
   valor: number;
   data: string;
+  arquivada?: boolean;
 }
 
 export default function Vendas() {
@@ -19,8 +20,11 @@ export default function Vendas() {
       id: "1",
       valor: 5000,
       data: "2024-02-24T09:03:00",
+      arquivada: false,
     },
   ]);
+
+  const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
 
   const [novaVenda, setNovaVenda] = useState({
     valor: "",
@@ -34,6 +38,7 @@ export default function Vendas() {
       id: (vendas.length + 1).toString(),
       valor: parseFloat(novaVenda.valor),
       data: novaVenda.data,
+      arquivada: false,
     };
 
     setVendas([venda, ...vendas]);
@@ -41,6 +46,18 @@ export default function Vendas() {
       valor: "",
       data: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     });
+  };
+
+  const handleArquivarVenda = (id: string) => {
+    setVendas(vendas.map(venda => 
+      venda.id === id 
+        ? { ...venda, arquivada: !venda.arquivada }
+        : venda
+    ));
+  };
+
+  const handleExcluirVenda = (id: string) => {
+    setVendas(vendas.filter(venda => venda.id !== id));
   };
 
   const formatarValor = (valor: number) => {
@@ -55,6 +72,8 @@ export default function Vendas() {
       locale: ptBR,
     });
   };
+
+  const vendasFiltradas = vendas.filter(venda => venda.arquivada === mostrarArquivadas);
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -99,16 +118,31 @@ export default function Vendas() {
       </Card>
 
       <div className="flex justify-end">
-        <Button variant="outline" size="sm">
-          <Archive className="w-4 h-4 mr-2" />
-          Mostrar Arquivadas
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => setMostrarArquivadas(!mostrarArquivadas)}
+        >
+          {mostrarArquivadas ? (
+            <>
+              <RefreshCcw className="w-4 h-4 mr-2" />
+              Mostrar Ativas
+            </>
+          ) : (
+            <>
+              <Archive className="w-4 h-4 mr-2" />
+              Mostrar Arquivadas
+            </>
+          )}
         </Button>
       </div>
 
       <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Vendas Recentes</h2>
+        <h2 className="text-lg font-semibold mb-4">
+          {mostrarArquivadas ? "Vendas Arquivadas" : "Vendas Recentes"}
+        </h2>
         <div className="space-y-4">
-          {vendas.map((venda) => (
+          {vendasFiltradas.map((venda) => (
             <div
               key={venda.id}
               className="flex items-center justify-between p-4 border rounded-lg"
@@ -125,10 +159,18 @@ export default function Vendas() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon">
-                  <Archive className="w-4 h-4" />
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleArquivarVenda(venda.id)}
+                >
+                  <Archive className={`w-4 h-4 ${venda.arquivada ? "text-blue-500" : ""}`} />
                 </Button>
-                <Button variant="ghost" size="icon">
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => handleExcluirVenda(venda.id)}
+                >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
               </div>
