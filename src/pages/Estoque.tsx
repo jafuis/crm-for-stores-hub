@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,17 @@ export default function Estoque() {
     valorUnitario: "",
   });
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
+
+  useEffect(() => {
+    const produtosSalvos = localStorage.getItem('produtos');
+    if (produtosSalvos) {
+      setProdutos(JSON.parse(produtosSalvos));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('produtos', JSON.stringify(produtos));
+  }, [produtos]);
 
   const handleAdicionarProduto = () => {
     if (!novoProduto.nome || !novoProduto.quantidade || !novoProduto.valorUnitario) return;
