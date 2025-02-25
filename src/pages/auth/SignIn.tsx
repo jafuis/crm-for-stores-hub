@@ -4,13 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
@@ -24,6 +25,9 @@ export default function SignIn() {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: {
+          persistSession: rememberMe
+        }
       });
 
       if (error) throw error;
@@ -120,6 +124,18 @@ export default function SignIn() {
                   <Eye className="h-5 w-5 text-gray-400" />
                 )}
               </Button>
+            </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="remember-me"
+                className="h-4 w-4 rounded border-gray-300 text-[#9b87f5] focus:ring-[#9b87f5]"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+                Lembrar-me
+              </label>
             </div>
           </div>
 

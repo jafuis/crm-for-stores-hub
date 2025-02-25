@@ -4,15 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { toast } = useToast();
@@ -36,11 +35,6 @@ export default function SignUp() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            username,
-          },
-        },
       });
 
       if (error) throw error;
@@ -48,9 +42,9 @@ export default function SignUp() {
       if (data.user) {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Verifique seu email para confirmar o cadastro.",
+          description: "Você será redirecionado para a página inicial.",
         });
-        navigate("/auth/signin");
+        navigate("/");
       }
     } catch (error: any) {
       toast({
@@ -73,17 +67,6 @@ export default function SignUp() {
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSignUp}>
           <div className="space-y-4">
-            <div className="relative">
-              <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-              <Input
-                type="text"
-                required
-                className="pl-10"
-                placeholder="Nome de usuário"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </div>
             <div className="relative">
               <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
               <Input
