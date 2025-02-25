@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,7 +21,6 @@ interface Cliente {
   classificacao: number;
 }
 
-// Mock data
 const clientesIniciais: Cliente[] = [
   {
     id: "1",
@@ -80,6 +78,13 @@ export default function Clientes() {
       aniversario: "",
       classificacao: 0,
     });
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() + timezoneOffset);
+    return localDate.toLocaleDateString('pt-BR');
   };
 
   return (
@@ -190,9 +195,7 @@ export default function Clientes() {
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <CalendarDays className="w-4 h-4" />
-                    <span>
-                      {new Date(cliente.aniversario).toLocaleDateString('pt-BR')}
-                    </span>
+                    <span>{formatDate(cliente.aniversario)}</span>
                   </div>
 
                   <Separator className="my-4" />
