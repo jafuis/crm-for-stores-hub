@@ -129,7 +129,21 @@ export function AppSidebar() {
                   }}
                   className={`text-base ${location.pathname === item.path ? "bg-secondary" : ""}`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <div className="relative">
+                    <item.icon className="w-5 h-5" />
+                    {(item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0)) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      </>
+                    )}
+                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                      </>
+                    )}
+                  </div>
                   <span>{item.title}</span>
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -137,12 +151,6 @@ export function AppSidebar() {
                       <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
                         {aniversariantes.length}
                       </span>
-                    </div>
-                  )}
-                  {item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0) && (
-                    <div className="relative">
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                     </div>
                   )}
                 </SidebarMenuButton>
