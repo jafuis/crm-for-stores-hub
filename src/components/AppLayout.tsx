@@ -2,6 +2,7 @@
 import { AppSidebar } from "./AppSidebar";
 import { PropsWithChildren, useState, useEffect } from "react";
 import { Outlet } from "react-router-dom";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export function AppLayout({ children }: PropsWithChildren) {
   const [hasNotifications, setHasNotifications] = useState(false);
@@ -44,28 +45,30 @@ export function AppLayout({ children }: PropsWithChildren) {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <AppSidebar />
-      <main className="flex-1 p-6">
-        <div className="mx-auto max-w-7xl">
-          <Outlet />
-          {children}
-        </div>
-        {hasNotifications && (
-          <div className="fixed bottom-4 right-4 animate-bounce">
-            <div className="bg-red-500 text-white px-4 py-2 rounded-full shadow-lg">
-              🔔 Você tem notificações!
-            </div>
+    <SidebarProvider>
+      <div className="flex min-h-screen bg-background">
+        <AppSidebar />
+        <main className="flex-1 p-6">
+          <div className="mx-auto max-w-7xl">
+            <Outlet />
+            {children}
           </div>
-        )}
-        {hasBirthdays && (
-          <div className="fixed bottom-16 right-4 animate-bounce">
-            <div className="bg-pink-500 text-white px-4 py-2 rounded-full shadow-lg">
-              🎂 Aniversariantes hoje!
+          {hasNotifications && (
+            <div className="fixed bottom-4 right-4 animate-bounce">
+              <div className="bg-red-500 text-white px-4 py-2 rounded-full shadow-lg">
+                🔔 Você tem notificações!
+              </div>
             </div>
-          </div>
-        )}
-      </main>
-    </div>
+          )}
+          {hasBirthdays && (
+            <div className="fixed bottom-16 right-4 animate-bounce">
+              <div className="bg-pink-500 text-white px-4 py-2 rounded-full shadow-lg">
+                🎂 Aniversariantes hoje!
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </SidebarProvider>
   );
 }
