@@ -90,19 +90,9 @@ export function AppSidebar() {
       setTarefasPendentes(pendentes);
     };
 
-    // Initial load
     carregarDados();
-
-    // Set up interval for real-time updates
-    const interval = setInterval(carregarDados, 1000);
-
-    // Listen for storage changes
     window.addEventListener('storage', carregarDados);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', carregarDados);
-    };
+    return () => window.removeEventListener('storage', carregarDados);
   }, []);
 
   const toggleMobileMenu = () => {
