@@ -69,30 +69,40 @@ export function AppSidebar() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const { toast } = useToast();
 
+  const checkForBirthdaysAndTasks = () => {
+    // Carregar aniversariantes
+    const clientesSalvos = localStorage.getItem('clientes');
+    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+    
+    const hoje = format(new Date(), 'MM-dd');
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+      const aniversario = new Date(cliente.aniversario);
+      return format(aniversario, 'MM-dd') === hoje;
+    });
+    
+    setAniversariantes(aniversariantesHoje);
+
+    // Carregar tarefas pendentes
+    const tarefasSalvas = localStorage.getItem('tarefas');
+    const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
+    const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
+    setTarefasPendentes(pendentes);
+  };
+
   useEffect(() => {
-    const carregarDados = () => {
-      // Carregar aniversariantes
-      const clientesSalvos = localStorage.getItem('clientes');
-      const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
-      
-      const hoje = format(new Date(), 'MM-dd');
-      const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-        const aniversario = new Date(cliente.aniversario);
-        return format(aniversario, 'MM-dd') === hoje;
-      });
-      
-      setAniversariantes(aniversariantesHoje);
+    // Initial check
+    checkForBirthdaysAndTasks();
 
-      // Carregar tarefas pendentes
-      const tarefasSalvas = localStorage.getItem('tarefas');
-      const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
-      const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
-      setTarefasPendentes(pendentes);
+    // Set up interval for real-time checks
+    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
+
+    // Listen for storage changes
+    window.addEventListener('storage', checkForBirthdaysAndTasks);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkForBirthdaysAndTasks);
     };
-
-    carregarDados();
-    window.addEventListener('storage', carregarDados);
-    return () => window.removeEventListener('storage', carregarDados);
   }, []);
 
   const toggleMobileMenu = () => {
@@ -122,7 +132,12 @@ export function AppSidebar() {
                   <item.icon className="w-5 h-5" />
                   <span>{item.title}</span>
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
-                    <PartyPopper className="w-5 h-5 ml-2 text-pink-500 animate-bounce" />
+                    <div className="flex items-center gap-1">
+                      <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
+                      <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                        {aniversariantes.length}
+                      </span>
+                    </div>
                   )}
                   {item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0) && (
                     <div className="relative">
