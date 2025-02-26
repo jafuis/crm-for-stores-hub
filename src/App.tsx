@@ -1,5 +1,5 @@
 
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
@@ -17,7 +17,7 @@ import "./App.css";
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <AppLayout />,
+    element: <AppLayout><Outlet /></AppLayout>,
     errorElement: <NotFound />,
     children: [
       {
