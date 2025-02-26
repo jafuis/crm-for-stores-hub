@@ -1,6 +1,5 @@
 
-import "./App.css";
-import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Clientes from "./pages/Clientes";
@@ -12,15 +11,13 @@ import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
 import Aniversariantes from "./pages/Aniversariantes";
+import Relatorios from "./pages/Relatorios";
+import "./App.css";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: (
-      <AppLayout>
-        <Outlet />
-      </AppLayout>
-    ),
+    element: <AppLayout />,
     errorElement: <NotFound />,
     children: [
       {
@@ -54,6 +51,10 @@ const router = createBrowserRouter([
       {
         path: "aniversariantes",
         element: <Aniversariantes />,
+      },
+      {
+        path: "relatorios",
+        element: <Relatorios />,
       },
       {
         path: "configuracoes",

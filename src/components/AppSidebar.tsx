@@ -11,7 +11,8 @@ import {
   Menu,
   Gift,
   MessageSquare,
-  PartyPopper
+  PartyPopper,
+  FileText
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,6 +40,13 @@ interface Cliente {
   aniversario: string;
 }
 
+interface Tarefa {
+  id: string;
+  titulo: string;
+  concluida: boolean;
+  dataVencimento: string;
+}
+
 const menuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Clientes", icon: Users, path: "/clientes" },
@@ -48,6 +56,7 @@ const menuItems = [
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
+  { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
 
@@ -57,19 +66,33 @@ export function AppSidebar() {
   const { openMobile, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
+  const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
-    const clientesSalvos = localStorage.getItem('clientes');
-    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
-    
-    const hoje = format(new Date(), 'MM-dd');
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const aniversario = new Date(cliente.aniversario);
-      return format(aniversario, 'MM-dd') === hoje;
-    });
-    
-    setAniversariantes(aniversariantesHoje);
+    const carregarDados = () => {
+      // Carregar aniversariantes
+      const clientesSalvos = localStorage.getItem('clientes');
+      const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+      
+      const hoje = format(new Date(), 'MM-dd');
+      const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+        const aniversario = new Date(cliente.aniversario);
+        return format(aniversario, 'MM-dd') === hoje;
+      });
+      
+      setAniversariantes(aniversariantesHoje);
+
+      // Carregar tarefas pendentes
+      const tarefasSalvas = localStorage.getItem('tarefas');
+      const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
+      const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
+      setTarefasPendentes(pendentes);
+    };
+
+    carregarDados();
+    window.addEventListener('storage', carregarDados);
+    return () => window.removeEventListener('storage', carregarDados);
   }, []);
 
   const toggleMobileMenu = () => {
@@ -94,12 +117,18 @@ export function AppSidebar() {
                       setOpenMobile(false);
                     }
                   }}
-                  className={location.pathname === item.path ? "bg-secondary" : ""}
+                  className={`text-base ${location.pathname === item.path ? "bg-secondary" : ""}`}
                 >
                   <item.icon className="w-5 h-5" />
                   <span>{item.title}</span>
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
                     <PartyPopper className="w-5 h-5 ml-2 text-pink-500 animate-bounce" />
+                  )}
+                  {item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0) && (
+                    <div className="relative">
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                    </div>
                   )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
