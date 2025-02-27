@@ -9,9 +9,6 @@ import {
   Settings,
   Home,
   Menu,
-  Gift,
-  MessageSquare,
-  PartyPopper,
   FileText
 } from "lucide-react";
 import {
@@ -55,7 +52,6 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
-  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
@@ -137,22 +133,8 @@ export function AppSidebar() {
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
-                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
-                      <>
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
-                      </>
-                    )}
                   </div>
                   <span>{item.title}</span>
-                  {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
-                      <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
-                        {aniversariantes.length}
-                      </span>
-                    </div>
-                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

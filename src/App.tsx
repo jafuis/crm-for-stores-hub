@@ -10,7 +10,6 @@ import Tarefas from "./pages/Tarefas";
 import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
 import Configuracoes from "./pages/Configuracoes";
-import Aniversariantes from "./pages/Aniversariantes";
 import Relatorios from "./pages/Relatorios";
 import "./App.css";
 
@@ -47,10 +46,6 @@ const router = createBrowserRouter([
       {
         path: "notificacoes",
         element: <Notificacoes />,
-      },
-      {
-        path: "aniversariantes",
-        element: <Aniversariantes />,
       },
       {
         path: "relatorios",
