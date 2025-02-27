@@ -2,16 +2,16 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, CheckSquare, MessageSquare, AlertCircle, Check } from "lucide-react";
+import { Gift, CheckSquare, MessageSquare, AlertCircle, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 interface Cliente {
   id: string;
   nome: string;
   telefone: string;
   aniversario: string;
-  acknowledged?: boolean;
 }
 
 interface Tarefa {
@@ -21,12 +21,25 @@ interface Tarefa {
   dataVencimento: string;
 }
 
+interface NotificacaoOculta {
+  id: string;
+  tipo: 'aniversario' | 'tarefa';
+  data: string; // Data em que foi ocultada
+}
+
 export default function Notificacoes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
+  const [notificacoesOcultas, setNotificacoesOcultas] = useState<NotificacaoOculta[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Carregar notificações ocultas
+    const ocultasSalvas = localStorage.getItem('notificacoesOcultas');
+    if (ocultasSalvas) {
+      setNotificacoesOcultas(JSON.parse(ocultasSalvas));
+    }
+
     // Carregar clientes do localStorage
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
@@ -34,55 +47,72 @@ export default function Notificacoes() {
     // Filtrar aniversariantes do dia
     const hoje = format(new Date(), 'MM-dd');
     const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const aniversario = new Date(cliente.aniversario);
-      return format(aniversario, 'MM-dd') === hoje;
+      if (!cliente.aniversario) return false;
+      
+      // Verificar se essa notificação está oculta
+      const estaOculta = notificacoesOcultas.some(
+        not => not.tipo === 'aniversario' && not.id === cliente.id && 
+        format(new Date(not.data), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+      );
+      
+      if (estaOculta) return false;
+      
+      try {
+        const aniversario = new Date(cliente.aniversario);
+        return format(aniversario, 'MM-dd') === hoje;
+      } catch (e) {
+        console.error("Erro ao processar data de aniversário:", e);
+        return false;
+      }
     });
     
-    // Carregar acknowlegments
-    const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
-    const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
-    setAcknowledgedBirthdays(acknowledgments);
-    
-    // Aplicar os acknowledgments aos aniversariantes
-    const aniversariantesComStatus = aniversariantesHoje.map(aniversariante => ({
-      ...aniversariante,
-      acknowledged: acknowledgments[aniversariante.id] || false
-    }));
-    
-    setAniversariantes(aniversariantesComStatus);
+    setAniversariantes(aniversariantesHoje);
 
-    // Carregar tarefas do localStorage
+    // Carregar tarefas pendentes
     const tarefasSalvas = localStorage.getItem('tarefas');
     const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
     
-    // Filtrar tarefas pendentes
-    const tarefasPendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
-    setTarefasPendentes(tarefasPendentes);
-  }, []);
+    // Filtrar tarefas pendentes que não estão ocultas
+    const pendentes = tarefas.filter((tarefa: Tarefa) => {
+      if (tarefa.concluida) return false;
+      
+      // Verificar se essa notificação está oculta
+      const estaOculta = notificacoesOcultas.some(
+        not => not.tipo === 'tarefa' && not.id === tarefa.id &&
+        format(new Date(not.data), 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd')
+      );
+      
+      return !estaOculta;
+    });
+    
+    setTarefasPendentes(pendentes);
+  }, [notificacoesOcultas]);
 
   const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
+    const telefoneFormatado = telefone.replace(/\D/g, '');
     const mensagem = `Feliz aniversário, ${nome}! 🎉`;
-    const url = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+    const url = `https://wa.me/55${telefoneFormatado}?text=${encodeURIComponent(mensagem)}`;
     window.open(url, '_blank');
+    
+    toast({
+      title: "Mensagem preparada",
+      description: "WhatsApp foi aberto com a mensagem de parabéns!",
+    });
   };
 
-  const handleAcknowledgeBirthday = (clienteId: string) => {
-    const newAcknowledgments = {
-      ...acknowledgedBirthdays,
-      [clienteId]: true
-    };
+  const ocultarNotificacao = (id: string, tipo: 'aniversario' | 'tarefa') => {
+    const novasOcultas = [
+      ...notificacoesOcultas,
+      { id, tipo, data: new Date().toISOString() }
+    ];
     
-    setAcknowledgedBirthdays(newAcknowledgments);
-    localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
+    setNotificacoesOcultas(novasOcultas);
+    localStorage.setItem('notificacoesOcultas', JSON.stringify(novasOcultas));
     
-    // Atualizar o estado dos aniversariantes
-    setAniversariantes(prev => 
-      prev.map(cliente => 
-        cliente.id === clienteId 
-          ? { ...cliente, acknowledged: true } 
-          : cliente
-      )
-    );
+    toast({
+      title: "Notificação ocultada",
+      description: "Esta notificação não será exibida hoje.",
+    });
   };
 
   return (
@@ -106,31 +136,31 @@ export default function Notificacoes() {
                     <div>
                       <h3 className="font-medium">{aniversariante.nome}</h3>
                       <p className="text-sm text-gray-500">Aniversário hoje!</p>
+                      {aniversariante.telefone && (
+                        <p className="text-sm text-gray-500">{aniversariante.telefone}</p>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {aniversariante.acknowledged ? (
-                      <span className="text-green-600 flex items-center gap-1">
-                        <Check className="w-4 h-4" /> OK
-                      </span>
-                    ) : (
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => ocultarNotificacao(aniversariante.id, 'aniversario')}
+                      className="h-7 w-7 text-gray-500 hover:text-red-500 hover:bg-transparent"
+                      title="Ocultar notificação"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                    {aniversariante.telefone && (
                       <Button 
                         variant="outline"
                         size="sm"
-                        onClick={() => handleAcknowledgeBirthday(aniversariante.id)}
-                        className="text-green-600 border-green-200 hover:bg-green-50"
+                        onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
                       >
-                        OK
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Enviar Mensagem
                       </Button>
                     )}
-                    <Button 
-                      variant="outline"
-                      size="sm"
-                      onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Enviar Mensagem
-                    </Button>
                   </div>
                 </div>
               ))}
@@ -146,11 +176,29 @@ export default function Notificacoes() {
             </h2>
             <div className="space-y-4">
               {tarefasPendentes.map((tarefa) => (
-                <div key={tarefa.id} className="flex items-center gap-4 p-4 border rounded-lg bg-red-50">
-                  <CheckSquare className="w-6 h-6 text-red-500" />
-                  <div>
-                    <h3 className="font-medium text-red-700">{tarefa.titulo}</h3>
-                    <p className="text-sm text-red-500">Pendente</p>
+                <div key={tarefa.id} className="flex items-center justify-between p-4 border rounded-lg bg-red-50">
+                  <div className="flex items-center gap-4">
+                    <CheckSquare className="w-6 h-6 text-red-500" />
+                    <div>
+                      <h3 className="font-medium text-red-700">{tarefa.titulo}</h3>
+                      <p className="text-sm text-red-500">Pendente</p>
+                      {tarefa.dataVencimento && (
+                        <p className="text-sm text-red-500">
+                          Vencimento: {format(new Date(tarefa.dataVencimento), 'dd/MM/yyyy')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => ocultarNotificacao(tarefa.id, 'tarefa')}
+                      className="h-7 w-7 text-gray-500 hover:text-red-500 hover:bg-transparent"
+                      title="Ocultar notificação"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
