@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, CheckSquare, MessageSquare, AlertCircle } from "lucide-react";
+import { Gift, CheckSquare, MessageSquare, AlertCircle, Check } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -11,6 +11,7 @@ interface Cliente {
   nome: string;
   telefone: string;
   aniversario: string;
+  acknowledged?: boolean;
 }
 
 interface Tarefa {
@@ -23,6 +24,7 @@ interface Tarefa {
 export default function Notificacoes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     // Carregar clientes do localStorage
@@ -36,7 +38,18 @@ export default function Notificacoes() {
       return format(aniversario, 'MM-dd') === hoje;
     });
     
-    setAniversariantes(aniversariantesHoje);
+    // Carregar acknowlegments
+    const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
+    const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
+    setAcknowledgedBirthdays(acknowledgments);
+    
+    // Aplicar os acknowledgments aos aniversariantes
+    const aniversariantesComStatus = aniversariantesHoje.map(aniversariante => ({
+      ...aniversariante,
+      acknowledged: acknowledgments[aniversariante.id] || false
+    }));
+    
+    setAniversariantes(aniversariantesComStatus);
 
     // Carregar tarefas do localStorage
     const tarefasSalvas = localStorage.getItem('tarefas');
@@ -51,6 +64,25 @@ export default function Notificacoes() {
     const mensagem = `Feliz aniversário, ${nome}! 🎉`;
     const url = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
     window.open(url, '_blank');
+  };
+
+  const handleAcknowledgeBirthday = (clienteId: string) => {
+    const newAcknowledgments = {
+      ...acknowledgedBirthdays,
+      [clienteId]: true
+    };
+    
+    setAcknowledgedBirthdays(newAcknowledgments);
+    localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
+    
+    // Atualizar o estado dos aniversariantes
+    setAniversariantes(prev => 
+      prev.map(cliente => 
+        cliente.id === clienteId 
+          ? { ...cliente, acknowledged: true } 
+          : cliente
+      )
+    );
   };
 
   return (
@@ -76,14 +108,30 @@ export default function Notificacoes() {
                       <p className="text-sm text-gray-500">Aniversário hoje!</p>
                     </div>
                   </div>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Enviar Mensagem
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {aniversariante.acknowledged ? (
+                      <span className="text-green-600 flex items-center gap-1">
+                        <Check className="w-4 h-4" /> OK
+                      </span>
+                    ) : (
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAcknowledgeBirthday(aniversariante.id)}
+                        className="text-green-600 border-green-200 hover:bg-green-50"
+                      >
+                        OK
+                      </Button>
+                    )}
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Enviar Mensagem
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

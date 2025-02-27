@@ -10,6 +10,8 @@ import {
   Home,
   Menu,
   Gift,
+  MessageSquare,
+  PartyPopper,
   FileText
 } from "lucide-react";
 import {
@@ -53,7 +55,7 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
-  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
+  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
@@ -74,14 +76,8 @@ export function AppSidebar() {
     
     const hoje = format(new Date(), 'MM-dd');
     const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      if (!cliente.aniversario) return false;
-      try {
-        const aniversario = new Date(cliente.aniversario);
-        return format(aniversario, 'MM-dd') === hoje;
-      } catch (e) {
-        console.error("Erro ao processar data de aniversário:", e);
-        return false;
-      }
+      const aniversario = new Date(cliente.aniversario);
+      return format(aniversario, 'MM-dd') === hoje;
     });
     
     setAniversariantes(aniversariantesHoje);
@@ -98,7 +94,7 @@ export function AppSidebar() {
     checkForBirthdaysAndTasks();
 
     // Set up interval for real-time checks
-    const interval = setInterval(checkForBirthdaysAndTasks, 60000); // Verificar a cada minuto
+    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
 
     // Listen for storage changes
     window.addEventListener('storage', checkForBirthdaysAndTasks);
@@ -149,10 +145,13 @@ export function AppSidebar() {
                     )}
                   </div>
                   <span>{item.title}</span>
-                  {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
-                    <span className="ml-auto text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
-                      {aniversariantes.length}
-                    </span>
+                  {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
+                      <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                        {aniversariantes.length}
+                      </span>
+                    </div>
                   )}
                 </SidebarMenuButton>
               </SidebarMenuItem>

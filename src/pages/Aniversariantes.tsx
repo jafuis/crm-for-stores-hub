@@ -2,129 +2,127 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, MessageSquare } from "lucide-react";
-import { format } from "date-fns";
+import { Gift, MessageSquare, SortAsc, SortDesc } from "lucide-react";
+import { format, isSameDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useToast } from "@/hooks/use-toast";
 
 interface Cliente {
   id: string;
   nome: string;
   telefone: string;
+  email: string;
   aniversario: string;
-  email?: string;
 }
 
 export default function Aniversariantes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
+  const [ordenacao, setOrdenacao] = useState<'asc' | 'desc'>('asc');
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Carregar clientes do localStorage
-    const clientesSalvos = localStorage.getItem('clientes');
-    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
-    
-    // Filtrar aniversariantes do dia
-    const hoje = format(new Date(), 'MM-dd');
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      if (!cliente.aniversario) return false;
-      try {
-        const aniversario = new Date(cliente.aniversario);
-        return format(aniversario, 'MM-dd') === hoje;
-      } catch (e) {
-        console.error("Erro ao processar data de aniversário:", e);
-        return false;
-      }
-    });
-    
-    setAniversariantes(aniversariantesHoje);
-  }, []);
+    const carregarAniversariantes = () => {
+      const clientesSalvos = localStorage.getItem('clientes');
+      const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+      
+      const hoje = new Date();
+      const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+        if (!cliente.aniversario) return false;
+        const aniversario = parseISO(cliente.aniversario);
+        return isSameDay(
+          new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+          new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+        );
+      });
+      
+      const aniversariantesOrdenados = [...aniversariantesHoje].sort((a, b) => {
+        if (ordenacao === 'asc') {
+          return a.nome.localeCompare(b.nome);
+        } else {
+          return b.nome.localeCompare(a.nome);
+        }
+      });
+      
+      setAniversariantes(aniversariantesOrdenados);
+    };
+
+    carregarAniversariantes();
+
+    window.addEventListener('storage', carregarAniversariantes);
+
+    return () => {
+      window.removeEventListener('storage', carregarAniversariantes);
+    };
+  }, [ordenacao]);
 
   const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
+    const telefoneFormatado = telefone.replace(/\D/g, '');
     const mensagem = `Feliz aniversário, ${nome}! 🎉`;
-    const url = `https://wa.me/55${telefone}?text=${encodeURIComponent(mensagem)}`;
+    const url = `https://wa.me/55${telefoneFormatado}?text=${encodeURIComponent(mensagem)}`;
     window.open(url, '_blank');
-  };
-
-  const formatarDataAniversario = (data: string): string => {
-    try {
-      const aniversario = new Date(data);
-      return format(aniversario, "dd 'de' MMMM", { locale: ptBR });
-    } catch (e) {
-      console.error("Erro ao formatar data:", e);
-      return data;
-    }
-  };
-
-  const calcularIdade = (data: string): number | null => {
-    try {
-      const aniversario = new Date(data);
-      const hoje = new Date();
-      let idade = hoje.getFullYear() - aniversario.getFullYear();
-      
-      const mesmoMes = hoje.getMonth() === aniversario.getMonth();
-      const mesmoDia = hoje.getDate() === aniversario.getDate();
-      
-      // Se ainda não chegou o aniversário deste ano, diminui 1
-      if (!mesmoMes || (mesmoMes && !mesmoDia && hoje.getDate() < aniversario.getDate())) {
-        idade--;
-      }
-      
-      return idade;
-    } catch (e) {
-      console.error("Erro ao calcular idade:", e);
-      return null;
-    }
+    
+    toast({
+      title: "Mensagem preparada",
+      description: "WhatsApp foi aberto com a mensagem de parabéns!",
+    });
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn pt-16">
-      <div>
-        <h1 className="text-2xl font-bold">Aniversariantes do Dia</h1>
-        <p className="text-muted-foreground">Clientes que fazem aniversário hoje</p>
+    <div className="space-y-6 animate-fadeIn px-4 md:px-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Aniversariantes do Dia</h1>
+          <p className="text-muted-foreground">Celebre com seus clientes!</p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setOrdenacao(prev => prev === 'asc' ? 'desc' : 'asc')}
+          className="flex items-center gap-2 w-full md:w-auto"
+        >
+          {ordenacao === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+          Ordenar por nome
+        </Button>
       </div>
 
-      <div className="grid gap-6">
-        {aniversariantes.length > 0 ? (
-          aniversariantes.map((aniversariante) => (
-            <Card key={aniversariante.id} className="p-6">
-              <div className="flex items-center justify-between">
+      {aniversariantes.length > 0 ? (
+        <div className="grid gap-4">
+          {aniversariantes.map((aniversariante) => (
+            <Card key={aniversariante.id} className="p-4 md:p-6 border-l-4 border-l-pink-500">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-pink-100">
+                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center animate-bounce shrink-0">
                     <Gift className="w-6 h-6 text-pink-500" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">{aniversariante.nome}</h3>
-                    <p className="text-sm text-gray-500">
-                      {formatarDataAniversario(aniversariante.aniversario)}
-                      {calcularIdade(aniversariante.aniversario) !== null && (
-                        <span> • {calcularIdade(aniversariante.aniversario)} anos</span>
-                      )}
-                    </p>
-                    {aniversariante.email && (
-                      <p className="text-sm text-gray-500">{aniversariante.email}</p>
+                    <p className="text-sm font-bold text-pink-500">HOJE!🎉</p>
+                    {aniversariante.telefone && (
+                      <p className="text-sm text-gray-500 break-words">{aniversariante.telefone}</p>
                     )}
-                    <p className="text-sm text-gray-500">{aniversariante.telefone}</p>
                   </div>
                 </div>
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                  className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100"
-                >
-                  <MessageSquare className="w-4 h-4 mr-2" />
-                  Enviar mensagem
-                </Button>
+                {aniversariante.telefone && (
+                  <Button
+                    variant="outline"
+                    onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
+                    className="text-pink-500 border-pink-200 hover:bg-pink-50 w-full md:w-auto"
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Enviar Mensagem
+                  </Button>
+                )}
               </div>
             </Card>
-          ))
-        ) : (
-          <Card className="p-6">
-            <div className="text-center text-gray-500">
-              <p>Nenhum cliente fazendo aniversário hoje.</p>
-            </div>
-          </Card>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <Card className="p-6">
+          <div className="text-center text-gray-500">
+            <Gift className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <p>Nenhum aniversariante hoje!</p>
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
