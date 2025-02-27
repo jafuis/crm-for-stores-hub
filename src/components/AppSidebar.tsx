@@ -69,30 +69,40 @@ export function AppSidebar() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const { toast } = useToast();
 
+  const checkForBirthdaysAndTasks = () => {
+    // Carregar aniversariantes
+    const clientesSalvos = localStorage.getItem('clientes');
+    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+    
+    const hoje = format(new Date(), 'MM-dd');
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+      const aniversario = new Date(cliente.aniversario);
+      return format(aniversario, 'MM-dd') === hoje;
+    });
+    
+    setAniversariantes(aniversariantesHoje);
+
+    // Carregar tarefas pendentes
+    const tarefasSalvas = localStorage.getItem('tarefas');
+    const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
+    const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
+    setTarefasPendentes(pendentes);
+  };
+
   useEffect(() => {
-    const carregarDados = () => {
-      // Carregar aniversariantes
-      const clientesSalvos = localStorage.getItem('clientes');
-      const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
-      
-      const hoje = format(new Date(), 'MM-dd');
-      const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-        const aniversario = new Date(cliente.aniversario);
-        return format(aniversario, 'MM-dd') === hoje;
-      });
-      
-      setAniversariantes(aniversariantesHoje);
+    // Initial check
+    checkForBirthdaysAndTasks();
 
-      // Carregar tarefas pendentes
-      const tarefasSalvas = localStorage.getItem('tarefas');
-      const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
-      const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
-      setTarefasPendentes(pendentes);
+    // Set up interval for real-time checks
+    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
+
+    // Listen for storage changes
+    window.addEventListener('storage', checkForBirthdaysAndTasks);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkForBirthdaysAndTasks);
     };
-
-    carregarDados();
-    window.addEventListener('storage', carregarDados);
-    return () => window.removeEventListener('storage', carregarDados);
   }, []);
 
   const toggleMobileMenu = () => {
@@ -119,15 +129,28 @@ export function AppSidebar() {
                   }}
                   className={`text-base ${location.pathname === item.path ? "bg-secondary" : ""}`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <div className="relative">
+                    <item.icon className="w-5 h-5" />
+                    {(item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0)) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      </>
+                    )}
+                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                      </>
+                    )}
+                  </div>
                   <span>{item.title}</span>
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
-                    <PartyPopper className="w-5 h-5 ml-2 text-pink-500 animate-bounce" />
-                  )}
-                  {item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0) && (
-                    <div className="relative">
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                      <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                    <div className="flex items-center gap-1">
+                      <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
+                      <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                        {aniversariantes.length}
+                      </span>
                     </div>
                   )}
                 </SidebarMenuButton>
