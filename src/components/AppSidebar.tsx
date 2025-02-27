@@ -9,6 +9,7 @@ import {
   Settings,
   Home,
   Menu,
+  Gift,
   FileText
 } from "lucide-react";
 import {
@@ -52,6 +53,7 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
+  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
@@ -72,8 +74,14 @@ export function AppSidebar() {
     
     const hoje = format(new Date(), 'MM-dd');
     const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const aniversario = new Date(cliente.aniversario);
-      return format(aniversario, 'MM-dd') === hoje;
+      if (!cliente.aniversario) return false;
+      try {
+        const aniversario = new Date(cliente.aniversario);
+        return format(aniversario, 'MM-dd') === hoje;
+      } catch (e) {
+        console.error("Erro ao processar data de aniversário:", e);
+        return false;
+      }
     });
     
     setAniversariantes(aniversariantesHoje);
@@ -90,7 +98,7 @@ export function AppSidebar() {
     checkForBirthdaysAndTasks();
 
     // Set up interval for real-time checks
-    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
+    const interval = setInterval(checkForBirthdaysAndTasks, 60000); // Verificar a cada minuto
 
     // Listen for storage changes
     window.addEventListener('storage', checkForBirthdaysAndTasks);
@@ -133,8 +141,19 @@ export function AppSidebar() {
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
+                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                      </>
+                    )}
                   </div>
                   <span>{item.title}</span>
+                  {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                    <span className="ml-auto text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                      {aniversariantes.length}
+                    </span>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

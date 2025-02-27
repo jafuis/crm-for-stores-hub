@@ -9,6 +9,7 @@ import Fornecedores from "./pages/Fornecedores";
 import Tarefas from "./pages/Tarefas";
 import NotFound from "./pages/NotFound";
 import Notificacoes from "./pages/Notificacoes";
+import Aniversariantes from "./pages/Aniversariantes";
 import Configuracoes from "./pages/Configuracoes";
 import Relatorios from "./pages/Relatorios";
 import "./App.css";
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
       {
         path: "notificacoes",
         element: <Notificacoes />,
+      },
+      {
+        path: "aniversariantes",
+        element: <Aniversariantes />,
       },
       {
         path: "relatorios",
