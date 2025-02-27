@@ -10,7 +10,6 @@ import {
   Home,
   Menu,
   Gift,
-  MessageSquare,
   PartyPopper,
   FileText
 } from "lucide-react";
@@ -31,7 +30,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useToast } from "@/hooks/use-toast";
 
 interface Cliente {
   id: string;
@@ -55,7 +53,7 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
-  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
+  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
@@ -67,18 +65,36 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const { toast } = useToast();
+
+  const isAniversarioHoje = (dataAniversario: string): boolean => {
+    try {
+      const aniversario = new Date(dataAniversario);
+      const hoje = new Date();
+      
+      // Verifica se é válido primeiro
+      if (isNaN(aniversario.getTime())) {
+        console.log("Data inválida:", dataAniversario);
+        return false;
+      }
+      
+      // Comparação apenas por mês e dia
+      return aniversario.getMonth() === hoje.getMonth() && 
+             aniversario.getDate() === hoje.getDate();
+    } catch (error) {
+      console.error("Erro ao processar data:", dataAniversario, error);
+      return false;
+    }
+  };
 
   const checkForBirthdaysAndTasks = () => {
     // Carregar aniversariantes
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
-    const hoje = format(new Date(), 'MM-dd');
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const aniversario = new Date(cliente.aniversario);
-      return format(aniversario, 'MM-dd') === hoje;
-    });
+    // Filtrar aniversariantes do dia
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
+      isAniversarioHoje(cliente.aniversario)
+    );
     
     setAniversariantes(aniversariantesHoje);
 
@@ -93,8 +109,8 @@ export function AppSidebar() {
     // Initial check
     checkForBirthdaysAndTasks();
 
-    // Set up interval for real-time checks
-    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
+    // Set up interval for regular checks (every minute)
+    const interval = setInterval(checkForBirthdaysAndTasks, 60000);
 
     // Listen for storage changes
     window.addEventListener('storage', checkForBirthdaysAndTasks);
@@ -146,7 +162,7 @@ export function AppSidebar() {
                   </div>
                   <span>{item.title}</span>
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
-                    <div className="flex items-center gap-1">
+                    <div className="ml-auto flex items-center gap-1">
                       <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
                       <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
                         {aniversariantes.length}
