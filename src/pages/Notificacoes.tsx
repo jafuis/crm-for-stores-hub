@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Gift, CheckSquare, MessageSquare, AlertCircle, Check } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,19 +28,25 @@ export default function Notificacoes() {
   const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // Função para verificar se é aniversário hoje
+  // Função aprimorada para verificar se é aniversário hoje
   const isAniversarioHoje = (dataAniversario: string): boolean => {
     try {
-      const aniversario = new Date(dataAniversario);
-      const hoje = new Date();
+      // Se a data não estiver definida, retorna falso
+      if (!dataAniversario) return false;
       
-      // Verifica se é válido primeiro
-      if (isNaN(aniversario.getTime())) {
+      // Converter a string para objeto Date
+      const aniversario = parseISO(dataAniversario);
+      
+      // Verificar se a data é válida
+      if (!isValid(aniversario)) {
         console.log("Data inválida:", dataAniversario);
         return false;
       }
       
-      // Comparação apenas por mês e dia
+      // Obter a data atual no fuso horário local (Brasil)
+      const hoje = new Date();
+      
+      // Comparação apenas por mês e dia, considerando o fuso horário correto
       return aniversario.getMonth() === hoje.getMonth() && 
              aniversario.getDate() === hoje.getDate();
     } catch (error) {

@@ -27,7 +27,7 @@ export default function Tarefas() {
   const [tarefas, setTarefas] = useState<Tarefa[]>([]);
   const [novaTarefa, setNovaTarefa] = useState({
     titulo: "",
-    dataVencimento: new Date().toISOString().split('T')[0]
+    dataVencimento: new Date().toISOString().split('T')[0] // Formato YYYY-MM-DD
   });
 
   useEffect(() => {
@@ -44,6 +44,7 @@ export default function Tarefas() {
   const handleAdicionarTarefa = () => {
     if (!novaTarefa.titulo) return;
 
+    // Garantir que a data está no formato ISO para armazenamento consistente
     const tarefa: Tarefa = {
       id: Date.now().toString(),
       titulo: novaTarefa.titulo,
@@ -53,7 +54,10 @@ export default function Tarefas() {
 
     const novasTarefas = [...tarefas, tarefa];
     setTarefas(novasTarefas);
-    setNovaTarefa({ titulo: "", dataVencimento: new Date().toISOString().split('T')[0] });
+    setNovaTarefa({ 
+      titulo: "", 
+      dataVencimento: new Date().toISOString().split('T')[0] 
+    });
   };
 
   const toggleTarefaConcluida = (id: string) => {

@@ -29,7 +29,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 
@@ -69,16 +70,35 @@ export function AppSidebar() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const { toast } = useToast();
 
+  // Função para verificar se é aniversário hoje
+  const isAniversarioHoje = (dataAniversario: string): boolean => {
+    if (!dataAniversario) return false;
+    
+    try {
+      const aniversario = parseISO(dataAniversario);
+      
+      if (!isValid(aniversario)) {
+        return false;
+      }
+      
+      const hoje = new Date();
+      return aniversario.getMonth() === hoje.getMonth() && 
+             aniversario.getDate() === hoje.getDate();
+    } catch (error) {
+      console.error("Erro ao verificar aniversário:", error);
+      return false;
+    }
+  };
+
   const checkForBirthdaysAndTasks = () => {
     // Carregar aniversariantes
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
-    const hoje = format(new Date(), 'MM-dd');
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const aniversario = new Date(cliente.aniversario);
-      return format(aniversario, 'MM-dd') === hoje;
-    });
+    // Filtrar aniversariantes usando a função aprimorada
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
+      isAniversarioHoje(cliente.aniversario)
+    );
     
     setAniversariantes(aniversariantesHoje);
 

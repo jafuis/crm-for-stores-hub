@@ -1,9 +1,10 @@
+
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileDown, Users, DollarSign, Truck, CheckSquare, Package } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface Venda {
@@ -47,6 +48,18 @@ interface Tarefa {
 }
 
 export default function Relatorios() {
+  // Função auxiliar para formatar datas no formato brasileiro
+  const formatarData = (dataISO: string) => {
+    try {
+      if (!dataISO) return "Data não informada";
+      const data = parseISO(dataISO);
+      return format(data, "dd/MM/yyyy", { locale: ptBR });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return dataISO;
+    }
+  };
+
   const gerarRelatorioVendas = () => {
     const vendas: Venda[] = JSON.parse(localStorage.getItem('vendas') || '[]');
     const doc = new jsPDF();
@@ -59,7 +72,7 @@ export default function Relatorios() {
     const totalVendas = vendasAtivas.reduce((acc, v) => acc + v.valor, 0);
     
     const dados = vendasAtivas.map(venda => [
-      format(new Date(venda.data), "dd/MM/yyyy HH:mm", { locale: ptBR }),
+      format(parseISO(venda.data), "dd/MM/yyyy HH:mm", { locale: ptBR }),
       venda.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
       venda.arquivada ? "Sim" : "Não"
     ]);
@@ -94,7 +107,7 @@ export default function Relatorios() {
     
     const hoje = new Date();
     const vendasHoje = vendas.filter(venda => {
-      const dataVenda = new Date(venda.data);
+      const dataVenda = parseISO(venda.data);
       return (
         dataVenda.getDate() === hoje.getDate() &&
         dataVenda.getMonth() === hoje.getMonth() &&
@@ -105,7 +118,7 @@ export default function Relatorios() {
     const totalVendasDia = vendasHoje.reduce((acc, v) => acc + v.valor, 0);
     
     const dados = vendasHoje.map(venda => [
-      format(new Date(venda.data), "HH:mm", { locale: ptBR }),
+      format(parseISO(venda.data), "HH:mm", { locale: ptBR }),
       venda.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
     ]);
 
@@ -207,7 +220,7 @@ export default function Relatorios() {
       cliente.nome,
       cliente.telefone,
       cliente.email,
-      format(new Date(cliente.aniversario), "dd/MM/yyyy", { locale: ptBR }),
+      formatarData(cliente.aniversario),
       "⭐".repeat(cliente.classificacao)
     ]);
 

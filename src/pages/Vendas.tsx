@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DollarSign, Calendar, FileText, Archive, Trash2, RefreshCcw } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
@@ -20,9 +20,15 @@ export default function Vendas() {
   const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
   const { toast } = useToast();
 
+  // Obter a data e hora atuais no formato ISO com ajuste para o fuso horário local
+  const obterDataHoraAtual = () => {
+    const agora = new Date();
+    return format(agora, "yyyy-MM-dd'T'HH:mm");
+  };
+
   const [novaVenda, setNovaVenda] = useState({
     valor: "",
-    data: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+    data: obterDataHoraAtual(),
   });
 
   useEffect(() => {
@@ -60,7 +66,7 @@ export default function Vendas() {
 
     setNovaVenda({
       valor: "",
-      data: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      data: obterDataHoraAtual(),
     });
   };
 
@@ -98,7 +104,8 @@ export default function Vendas() {
   };
 
   const formatarData = (data: string) => {
-    return format(new Date(data), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
+    // Usando a formatação com localização brasileira
+    return format(parseISO(data), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
       locale: ptBR,
     });
   };

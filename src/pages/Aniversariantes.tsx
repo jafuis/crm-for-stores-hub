@@ -25,10 +25,15 @@ export default function Aniversariantes() {
       const clientesSalvos = localStorage.getItem('clientes');
       const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
       
+      // Obter data atual no fuso horário brasileiro
       const hoje = new Date();
       const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
         if (!cliente.aniversario) return false;
+        
+        // Converter a string de data para objeto Date
         const aniversario = parseISO(cliente.aniversario);
+        
+        // Comparar apenas o dia e mês, ignorando o ano
         return isSameDay(
           new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
           new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
@@ -37,9 +42,9 @@ export default function Aniversariantes() {
       
       const aniversariantesOrdenados = [...aniversariantesHoje].sort((a, b) => {
         if (ordenacao === 'asc') {
-          return a.nome.localeCompare(b.nome);
+          return a.nome.localeCompare(b.nome, 'pt-BR');
         } else {
-          return b.nome.localeCompare(a.nome);
+          return b.nome.localeCompare(a.nome, 'pt-BR');
         }
       });
       
