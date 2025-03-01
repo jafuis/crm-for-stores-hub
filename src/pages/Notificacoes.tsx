@@ -2,10 +2,21 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, CheckSquare, MessageSquare, AlertCircle, Check } from "lucide-react";
+import { Gift, CheckSquare, MessageSquare, AlertCircle, Trash2, Trash } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Cliente {
   id: string;
@@ -119,7 +130,7 @@ export default function Notificacoes() {
     });
   };
 
-  const handleAcknowledgeBirthday = (clienteId: string) => {
+  const handleRemoveBirthday = (clienteId: string) => {
     const newAcknowledgments = {
       ...acknowledgedBirthdays,
       [clienteId]: true
@@ -130,26 +141,67 @@ export default function Notificacoes() {
     
     // Atualizar o estado dos aniversariantes
     setAniversariantes(prev => 
-      prev.map(cliente => 
-        cliente.id === clienteId 
-          ? { ...cliente, acknowledged: true } 
-          : cliente
-      )
+      prev.filter(cliente => cliente.id !== clienteId)
     );
     
     toast({
-      title: "Notificação confirmada",
-      description: "Você marcou esta notificação como visualizada.",
+      title: "Notificação removida",
+      description: "A notificação foi removida com sucesso.",
+    });
+  };
+
+  const handleRemoveAllBirthdays = () => {
+    // Marcar todos os aniversariantes como acknowledged
+    const newAcknowledgments = { ...acknowledgedBirthdays };
+    aniversariantes.forEach(aniversariante => {
+      newAcknowledgments[aniversariante.id] = true;
+    });
+    
+    setAcknowledgedBirthdays(newAcknowledgments);
+    localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
+    
+    // Limpar a lista de aniversariantes
+    setAniversariantes([]);
+    
+    toast({
+      title: "Notificações removidas",
+      description: "Todas as notificações de aniversário foram removidas.",
     });
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn px-4 md:px-0">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Notificações</h1>
-        <Button variant="outline" size="sm" onClick={carregarDados}>
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={carregarDados}>
+            Atualizar
+          </Button>
+          {(aniversariantes.length > 0) && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50">
+                  <Trash className="w-4 h-4 mr-2" />
+                  Limpar Todas
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remover todas as notificações?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação não pode ser desfeita. Todas as notificações de aniversário serão removidas.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRemoveAllBirthdays} className="bg-red-500 hover:bg-red-600">
+                    Remover Todas
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6">
@@ -161,43 +213,41 @@ export default function Notificacoes() {
             </h2>
             <div className="space-y-4">
               {aniversariantes.map((aniversariante) => (
-                <div key={aniversariante.id} className="flex items-center justify-between p-4 border rounded-lg bg-pink-50">
-                  <div className="flex items-center gap-4">
-                    <Gift className="w-6 h-6 text-pink-500" />
-                    <div>
-                      <h3 className="font-medium">{aniversariante.nome}</h3>
-                      <p className="text-sm text-gray-500">Aniversário hoje!</p>
-                      <p className="text-xs text-gray-400">
-                        Data: {format(new Date(aniversariante.aniversario), "dd/MM/yyyy")}
-                      </p>
+                <div key={aniversariante.id} className="flex flex-col p-4 border rounded-lg bg-pink-50">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-4 mb-3">
+                      <Gift className="w-6 h-6 text-pink-500 shrink-0" />
+                      <div>
+                        <h3 className="font-medium">{aniversariante.nome}</h3>
+                        <p className="text-sm text-gray-500">Aniversário hoje!</p>
+                        <p className="text-xs text-gray-400">
+                          Data: {format(new Date(aniversariante.aniversario), "dd/MM/yyyy")}
+                        </p>
+                      </div>
                     </div>
+                    <Button 
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveBirthday(aniversariante.id)}
+                      className="text-red-600 hover:bg-red-100 shrink-0"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {aniversariante.acknowledged ? (
-                      <span className="text-green-600 flex items-center gap-1">
-                        <Check className="w-4 h-4" /> OK
-                      </span>
-                    ) : (
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAcknowledgeBirthday(aniversariante.id)}
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
-                        OK
-                      </Button>
-                    )}
-                    {aniversariante.telefone && (
+                  
+                  {aniversariante.telefone && (
+                    <div className="mt-1">
                       <Button 
                         variant="outline"
                         size="sm"
                         onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
+                        className="w-full"
                       >
                         <MessageSquare className="w-4 h-4 mr-2" />
                         Enviar Mensagem
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
