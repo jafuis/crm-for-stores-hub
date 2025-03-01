@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, CheckSquare, MessageSquare, AlertCircle, Trash2, Trash } from "lucide-react";
+import { Gift, CheckSquare, AlertCircle, Trash2, Trash } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -220,9 +219,18 @@ export default function Notificacoes() {
                       <div>
                         <h3 className="font-medium">{aniversariante.nome}</h3>
                         <p className="text-sm text-gray-500">Aniversário hoje!</p>
-                        <p className="text-xs text-gray-400">
-                          Data: {format(new Date(aniversariante.aniversario), "dd/MM/yyyy")}
-                        </p>
+                        {aniversariante.telefone && (
+                          <p className="text-xs text-gray-600 flex items-center cursor-pointer hover:text-pink-600" 
+                             onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-1 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
+                              <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1Z" />
+                              <path d="M14 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1Z" />
+                              <path d="M9.5 13.5c.5 1 1.5 1 2 1s2.5 0 3.5-1.5" />
+                            </svg>
+                            {aniversariante.telefone}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <Button 
@@ -234,20 +242,6 @@ export default function Notificacoes() {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  
-                  {aniversariante.telefone && (
-                    <div className="mt-1">
-                      <Button 
-                        variant="outline"
-                        size="sm"
-                        onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}
-                        className="w-full"
-                      >
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Enviar Mensagem
-                      </Button>
-                    </div>
-                  )}
                 </div>
               ))}
             </div>
