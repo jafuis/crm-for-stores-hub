@@ -12,7 +12,8 @@ import {
   Gift,
   MessageSquare,
   PartyPopper,
-  FileText
+  FileText,
+  Lightbulb
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,7 @@ const menuItems = [
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
+  { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
 ];
 

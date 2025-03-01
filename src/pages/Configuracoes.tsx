@@ -255,7 +255,7 @@ export default function Configuracoes() {
             </p>
             <Separator className="my-2" />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Todos os direitos reservados © {new Date().getFullYear()}
+              Todos os direitos reservados garimpodeofertas © {new Date().getFullYear()}
             </p>
           </div>
         </Card>

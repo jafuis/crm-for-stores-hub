@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp, Gift } from "lucide-react";
+import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp, Gift, MessageSquare } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { isSameDay } from "date-fns";
@@ -137,6 +137,12 @@ export default function Clientes() {
     );
   };
 
+  // Format phone number for WhatsApp link
+  const formatWhatsAppNumber = (phone: string) => {
+    // Remove non-digit characters
+    return phone.replace(/\D/g, '');
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn pt-16">
       <div>
@@ -239,11 +245,20 @@ export default function Clientes() {
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-2 text-gray-600">
                   <Mail className="w-4 h-4" />
-                  {cliente.email}
+                  <a href={`mailto:${cliente.email}`} className="hover:text-blue-500 transition-colors">
+                    {cliente.email}
+                  </a>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Phone className="w-4 h-4" />
-                  {cliente.telefone}
+                  <MessageSquare className="w-4 h-4 text-green-500" />
+                  <a 
+                    href={`https://wa.me/${formatWhatsAppNumber(cliente.telefone)}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-green-500 transition-colors"
+                  >
+                    {cliente.telefone}
+                  </a>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
                   <Calendar className="w-4 h-4" />
