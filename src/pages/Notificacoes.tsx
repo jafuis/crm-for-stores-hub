@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,29 +73,25 @@ export default function Notificacoes() {
     
     console.log("Total de clientes carregados:", clientes.length);
     
-    // Filtrar aniversariantes do dia usando a função aprimorada
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const resultado = isAniversarioHoje(cliente.aniversario);
-      if (resultado) {
-        console.log("Aniversariante encontrado:", cliente.nome, cliente.aniversario);
-      }
-      return resultado;
-    });
-    
-    console.log("Aniversariantes hoje:", aniversariantesHoje.length);
-    
     // Carregar acknowledegments
     const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
     const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
     setAcknowledgedBirthdays(acknowledgments);
     
-    // Aplicar os acknowledgments aos aniversariantes
-    const aniversariantesComStatus = aniversariantesHoje.map(aniversariante => ({
-      ...aniversariante,
-      acknowledged: acknowledgments[aniversariante.id] || false
-    }));
+    // Filtrar aniversariantes do dia que não foram ignorados
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+      const ehAniversariante = isAniversarioHoje(cliente.aniversario);
+      const foiIgnorado = acknowledgments[cliente.id];
+      
+      if (ehAniversariante && !foiIgnorado) {
+        console.log("Aniversariante encontrado:", cliente.nome, cliente.aniversario);
+      }
+      return ehAniversariante && !foiIgnorado;
+    });
     
-    setAniversariantes(aniversariantesComStatus);
+    console.log("Aniversariantes hoje (não ignorados):", aniversariantesHoje.length);
+    
+    setAniversariantes(aniversariantesHoje);
 
     // Carregar tarefas do localStorage
     const tarefasSalvas = localStorage.getItem('tarefas');
@@ -117,6 +114,26 @@ export default function Notificacoes() {
     };
   }, []);
 
+  // Verificar diariamente se é um novo dia para resetar os acknowledgments
+  useEffect(() => {
+    const checkNewDay = () => {
+      const lastDate = localStorage.getItem('lastAcknowledgedDate');
+      const today = format(new Date(), 'yyyy-MM-dd');
+      
+      if (lastDate !== today) {
+        // Novo dia - limpar todos os acknowledgments
+        localStorage.setItem('acknowledgedBirthdays', JSON.stringify({}));
+        localStorage.setItem('lastAcknowledgedDate', today);
+        setAcknowledgedBirthdays({});
+      }
+    };
+
+    checkNewDay();
+    const interval = setInterval(checkNewDay, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
     const telefoneFormatado = telefone.replace(/\D/g, '');
     const mensagem = `Feliz aniversário, ${nome}! 🎉`;
@@ -137,6 +154,7 @@ export default function Notificacoes() {
     
     setAcknowledgedBirthdays(newAcknowledgments);
     localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
+    localStorage.setItem('lastAcknowledgedDate', format(new Date(), 'yyyy-MM-dd'));
     
     // Atualizar o estado dos aniversariantes
     setAniversariantes(prev => 
@@ -158,6 +176,7 @@ export default function Notificacoes() {
     
     setAcknowledgedBirthdays(newAcknowledgments);
     localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
+    localStorage.setItem('lastAcknowledgedDate', format(new Date(), 'yyyy-MM-dd'));
     
     // Limpar a lista de aniversariantes
     setAniversariantes([]);

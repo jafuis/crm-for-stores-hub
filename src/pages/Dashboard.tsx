@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, ChevronDown } from "lucide-react";
 
 interface Venda {
   id: string;
@@ -27,17 +27,22 @@ interface Cliente {
 export default function Dashboard() {
   const currentDate = new Date();
   const currentMonth = format(currentDate, 'MMMM yyyy', { locale: ptBR });
+  const currentDayFormatted = format(currentDate, 'dd/MM/yyyy');
   
   const [metaDiaria, setMetaDiaria] = useState<number>(5000);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [lastCheckedDay, setLastCheckedDay] = useState<string>('');
   
   useEffect(() => {
     const vendasSalvas = localStorage.getItem('vendas');
     const clientesSalvos = localStorage.getItem('clientes');
     const metaSalva = localStorage.getItem('metaDiaria');
     const ultimaVerificacao = localStorage.getItem('ultimaVerificacaoMes');
+    const ultimoDiaVerificado = localStorage.getItem('ultimoDiaVerificado');
 
+    setLastCheckedDay(ultimoDiaVerificado || '');
+    
     if (vendasSalvas) {
       const todasVendas = JSON.parse(vendasSalvas);
       
@@ -61,6 +66,13 @@ export default function Dashboard() {
       } else {
         setVendas(todasVendas);
       }
+      
+      // Verificar se mudou o dia - para resetar contadores diários
+      const diaAtual = format(new Date(), 'yyyy-MM-dd');
+      if (!ultimoDiaVerificado || ultimoDiaVerificado !== diaAtual) {
+        localStorage.setItem('ultimoDiaVerificado', diaAtual);
+        setLastCheckedDay(diaAtual);
+      }
     }
 
     if (clientesSalvos) {
@@ -70,20 +82,35 @@ export default function Dashboard() {
     if (metaSalva) {
       setMetaDiaria(Number(metaSalva));
     }
-  }, []);
+    
+    // Verificar se é um novo dia a cada minuto
+    const intervalId = setInterval(() => {
+      const diaAtual = format(new Date(), 'yyyy-MM-dd');
+      if (lastCheckedDay && lastCheckedDay !== diaAtual) {
+        localStorage.setItem('ultimoDiaVerificado', diaAtual);
+        setLastCheckedDay(diaAtual);
+        window.location.reload(); // Recarregar para atualizar dados diários
+      }
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, [lastCheckedDay]);
 
   // Calcular vendas do dia (apenas não arquivadas)
   const vendasDoDia = vendas
     .filter(venda => {
-      const dataVenda = new Date(venda.data);
-      return format(dataVenda, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd') && !venda.arquivada;
+      const dataVenda = parseISO(venda.data);
+      return isWithinInterval(dataVenda, {
+        start: startOfDay(new Date()),
+        end: endOfDay(new Date())
+      }) && !venda.arquivada;
     })
     .reduce((total, venda) => total + venda.valor, 0);
 
   // Calcular vendas do mês (apenas não arquivadas)
   const vendasDoMes = vendas
     .filter(venda => {
-      const dataVenda = new Date(venda.data);
+      const dataVenda = parseISO(venda.data);
       return isWithinInterval(dataVenda, {
         start: startOfMonth(currentDate),
         end: endOfMonth(currentDate)
@@ -108,13 +135,16 @@ export default function Dashboard() {
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">{currentMonth}</h1>
+        <div className="text-sm text-muted-foreground">
+          Hoje: {currentDayFormatted}
+        </div>
       </div>
 
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <DollarSign className="w-6 h-6 text-[#9b87f5]" />
-            <h2 className="text-lg font-semibold">Total de Vendas</h2>
+            <h2 className="text-lg font-semibold">Total de Vendas do Dia</h2>
           </div>
           <div className="text-3xl font-bold">
             {vendasDoDia.toLocaleString('pt-BR', {
