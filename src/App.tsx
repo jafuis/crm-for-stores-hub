@@ -14,6 +14,7 @@ import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
 // Add the new NovosProjetos import
 import NovosProjetos from "@/pages/NovosProjetos";
+import { Outlet } from "react-router-dom";
 
 function App() {
   return (
@@ -21,7 +22,7 @@ function App() {
       router={createBrowserRouter([
         {
           path: "/",
-          element: <AppLayout />,
+          element: <AppLayout><Outlet /></AppLayout>,
           errorElement: <NotFound />,
           children: [
             { path: "/", element: <Dashboard /> },
