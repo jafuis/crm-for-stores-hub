@@ -141,21 +141,24 @@ export default function Configuracoes() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Configurações</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Configurações</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Aparência */}
-        <Card className="p-6">
+        <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            {isDarkMode ? <Moon className="w-5 h-5 mr-2" /> : <Sun className="w-5 h-5 mr-2" />}
-            <h2 className="text-lg font-medium">Aparência</h2>
+            {isDarkMode ? 
+              <Moon className="w-5 h-5 mr-2 dark:text-white" /> : 
+              <Sun className="w-5 h-5 mr-2" />
+            }
+            <h2 className="text-lg font-medium dark:text-white">Aparência</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Modo escuro</p>
+                <p className="font-medium dark:text-white">Modo escuro</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Alterne entre o modo claro e escuro
                 </p>
@@ -170,16 +173,16 @@ export default function Configuracoes() {
         </Card>
 
         {/* Notificações */}
-        <Card className="p-6">
+        <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Bell className="w-5 h-5 mr-2" />
-            <h2 className="text-lg font-medium">Notificações</h2>
+            <Bell className="w-5 h-5 mr-2 dark:text-white" />
+            <h2 className="text-lg font-medium dark:text-white">Notificações</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Ativar notificações</p>
+                <p className="font-medium dark:text-white">Ativar notificações</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Receba alertas sobre eventos importantes
                 </p>
@@ -194,16 +197,16 @@ export default function Configuracoes() {
         </Card>
 
         {/* Dados */}
-        <Card className="p-6">
+        <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Database className="w-5 h-5 mr-2" />
-            <h2 className="text-lg font-medium">Dados</h2>
+            <Database className="w-5 h-5 mr-2 dark:text-white" />
+            <h2 className="text-lg font-medium dark:text-white">Dados</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Salvamento automático</p>
+                <p className="font-medium dark:text-white">Salvamento automático</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Salvar alterações automaticamente
                 </p>
@@ -215,13 +218,13 @@ export default function Configuracoes() {
               />
             </div>
 
-            <Separator />
+            <Separator className="dark:bg-gray-700" />
 
             <div className="flex flex-col space-y-2">
               <Button 
                 variant="outline" 
                 onClick={exportData}
-                className="w-full justify-start"
+                className="w-full justify-start dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
               >
                 <Database className="w-4 h-4 mr-2" />
                 Exportar dados
@@ -240,20 +243,20 @@ export default function Configuracoes() {
         </Card>
 
         {/* Sobre */}
-        <Card className="p-6">
+        <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Info className="w-5 h-5 mr-2" />
-            <h2 className="text-lg font-medium">Sobre</h2>
+            <Info className="w-5 h-5 mr-2 dark:text-white" />
+            <h2 className="text-lg font-medium dark:text-white">Sobre</h2>
           </div>
           
           <div className="space-y-2">
-            <p className="text-sm">
-              <span className="font-medium">Versão:</span> 1.0.0
+            <p className="text-sm dark:text-gray-300">
+              <span className="font-medium dark:text-white">Versão:</span> 1.0.0
             </p>
-            <p className="text-sm">
-              <span className="font-medium">Atualizado em:</span> {new Date().toLocaleDateString('pt-BR')}
+            <p className="text-sm dark:text-gray-300">
+              <span className="font-medium dark:text-white">Atualizado em:</span> {new Date().toLocaleDateString('pt-BR')}
             </p>
-            <Separator className="my-2" />
+            <Separator className="my-2 dark:bg-gray-700" />
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Todos os direitos reservados garimpodeofertas © {new Date().getFullYear()}
             </p>

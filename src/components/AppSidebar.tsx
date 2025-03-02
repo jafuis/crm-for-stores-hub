@@ -132,12 +132,12 @@ export function AppSidebar() {
   };
 
   const renderSidebarContent = () => (
-    <SidebarContent className="bg-white h-full">
-      <div className="px-3 py-4 border-b">
-        <h1 className="text-xl font-bold text-primary">CRM PARA LOJAS</h1>
+    <SidebarContent className="bg-white dark:bg-gray-800 h-full">
+      <div className="px-3 py-4 border-b dark:border-gray-700">
+        <h1 className="text-xl font-bold text-primary dark:text-white">CRM PARA LOJAS</h1>
       </div>
       <SidebarGroup>
-        <SidebarGroupLabel>Menu</SidebarGroupLabel>
+        <SidebarGroupLabel className="dark:text-gray-300">Menu</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {menuItems.map((item) => (
@@ -149,7 +149,7 @@ export function AppSidebar() {
                       setOpenMobile(false);
                     }
                   }}
-                  className={`text-base ${location.pathname === item.path ? "bg-secondary" : ""}`}
+                  className={`text-base dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
                 >
                   <div className="relative">
                     <item.icon className="w-5 h-5" />
@@ -170,7 +170,7 @@ export function AppSidebar() {
                   {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
                     <div className="flex items-center gap-1">
                       <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
-                      <span className="text-xs bg-pink-100 text-pink-600 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-pink-100 text-pink-600 dark:bg-pink-900 dark:text-pink-300 px-2 py-0.5 rounded-full">
                         {aniversariantes.length}
                       </span>
                     </div>
@@ -189,7 +189,7 @@ export function AppSidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="fixed top-4 left-4 z-[100] md:hidden"
+        className="fixed top-4 left-4 z-[100] md:hidden text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
         onClick={toggleMobileMenu}
       >
         <Menu className="h-6 w-6" />
@@ -199,7 +199,7 @@ export function AppSidebar() {
         <Sheet open={openMobile} onOpenChange={setOpenMobile}>
           <SheetContent 
             side="left" 
-            className="w-[280px] p-0 bg-white"
+            className="w-[280px] p-0 bg-white dark:bg-gray-800 dark:border-gray-700"
           >
             {renderSidebarContent()}
           </SheetContent>
