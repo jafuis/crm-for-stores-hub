@@ -1,5 +1,6 @@
+
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import AppLayout from "@/layout/AppLayout";
+import AppLayout from "@/components/AppLayout";
 import NotFound from "@/pages/NotFound";
 import Dashboard from "@/pages/Dashboard";
 import Clientes from "@/pages/Clientes";
