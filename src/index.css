@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -102,4 +103,13 @@
   h1, h2, h3, h4, h5, h6 {
     @apply text-gray-900 dark:text-white;
   }
+}
+
+/* Custom styling for the mobile menu tab */
+.mobile-menu-tab {
+  transition: all 0.3s ease;
+}
+
+.mobile-menu-tab:hover {
+  width: 1.5rem;
 }

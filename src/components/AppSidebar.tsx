@@ -8,7 +8,7 @@ import {
   Bell,
   Settings,
   Home,
-  Menu,
+  ChevronRight,
   Gift,
   MessageSquare,
   PartyPopper,
@@ -186,14 +186,19 @@ export function AppSidebar() {
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="icon"
-        className="fixed top-4 left-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600"
+      {/* Replace hamburger button with a tab/ear on the side for mobile */}
+      <div 
+        className={`
+          fixed top-1/2 -translate-y-1/2 left-0 z-[100] md:hidden
+          h-32 w-6 bg-primary dark:bg-sidebar-primary rounded-r-md
+          flex items-center justify-center cursor-pointer
+          shadow-md transition-transform hover:w-8
+          ${openMobile ? 'translate-x-64' : 'translate-x-0'}
+        `}
         onClick={toggleMobileMenu}
       >
-        <Menu className="h-6 w-6" />
-      </Button>
+        <ChevronRight className="h-5 w-5 text-white dark:text-white" />
+      </div>
 
       {isMobile ? (
         <Sheet open={openMobile} onOpenChange={setOpenMobile}>
