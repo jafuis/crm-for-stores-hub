@@ -187,9 +187,9 @@ export function AppSidebar() {
   return (
     <>
       <Button
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="fixed top-4 left-4 z-[100] md:hidden text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700"
+        className="fixed top-4 left-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600"
         onClick={toggleMobileMenu}
       >
         <Menu className="h-6 w-6" />

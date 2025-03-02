@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,9 +21,7 @@ export default function Configuracoes() {
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
 
-  // Load theme preference on component mount
   useEffect(() => {
-    // Check if dark mode is already set in localStorage or if user prefers dark scheme
     const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     
@@ -37,7 +34,6 @@ export default function Configuracoes() {
     }
   }, []);
 
-  // Toggle between dark and light mode
   const toggleTheme = () => {
     setIsDarkMode(prev => {
       const newMode = !prev;
@@ -59,13 +55,10 @@ export default function Configuracoes() {
 
   const handleClearData = () => {
     if (confirm("Tem certeza que deseja limpar todos os dados do aplicativo? Esta ação não pode ser desfeita.")) {
-      // Keys to preserve (theme settings, etc)
       const keysToPreserve = ["theme"];
       
-      // Get all keys from localStorage
       const allKeys = Object.keys(localStorage);
       
-      // Remove all keys except those to preserve
       allKeys.forEach(key => {
         if (!keysToPreserve.includes(key)) {
           localStorage.removeItem(key);
@@ -97,7 +90,6 @@ export default function Configuracoes() {
 
   const exportData = () => {
     try {
-      // Get all localStorage data except theme
       const data: Record<string, any> = {};
       Object.keys(localStorage).forEach(key => {
         if (key !== "theme") {
@@ -109,18 +101,15 @@ export default function Configuracoes() {
         }
       });
       
-      // Create a blob with the data
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       
-      // Create a download link
       const a = document.createElement("a");
       a.href = url;
       a.download = `backup-dados-${new Date().toISOString().split("T")[0]}.json`;
       document.body.appendChild(a);
       a.click();
       
-      // Clean up
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
@@ -141,24 +130,23 @@ export default function Configuracoes() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold dark:text-white">Configurações</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações</h1>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Aparência */}
         <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
             {isDarkMode ? 
-              <Moon className="w-5 h-5 mr-2 dark:text-white" /> : 
-              <Sun className="w-5 h-5 mr-2" />
+              <Moon className="w-5 h-5 mr-2 text-gray-900 dark:text-white" /> : 
+              <Sun className="w-5 h-5 mr-2 text-gray-900" />
             }
-            <h2 className="text-lg font-medium dark:text-white">Aparência</h2>
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Aparência</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium dark:text-white">Modo escuro</p>
+                <p className="font-medium text-gray-900 dark:text-white">Modo escuro</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Alterne entre o modo claro e escuro
                 </p>
@@ -172,17 +160,16 @@ export default function Configuracoes() {
           </div>
         </Card>
 
-        {/* Notificações */}
         <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Bell className="w-5 h-5 mr-2 dark:text-white" />
-            <h2 className="text-lg font-medium dark:text-white">Notificações</h2>
+            <Bell className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Notificações</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium dark:text-white">Ativar notificações</p>
+                <p className="font-medium text-gray-900 dark:text-white">Ativar notificações</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Receba alertas sobre eventos importantes
                 </p>
@@ -196,17 +183,16 @@ export default function Configuracoes() {
           </div>
         </Card>
 
-        {/* Dados */}
         <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Database className="w-5 h-5 mr-2 dark:text-white" />
-            <h2 className="text-lg font-medium dark:text-white">Dados</h2>
+            <Database className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Dados</h2>
           </div>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium dark:text-white">Salvamento automático</p>
+                <p className="font-medium text-gray-900 dark:text-white">Salvamento automático</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Salvar alterações automaticamente
                 </p>
@@ -224,7 +210,7 @@ export default function Configuracoes() {
               <Button 
                 variant="outline" 
                 onClick={exportData}
-                className="w-full justify-start dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
+                className="w-full justify-start text-gray-900 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
               >
                 <Database className="w-4 h-4 mr-2" />
                 Exportar dados
@@ -242,11 +228,10 @@ export default function Configuracoes() {
           </div>
         </Card>
 
-        {/* Sobre */}
         <Card className="p-6 dark:border-gray-700">
           <div className="flex items-center mb-4">
-            <Info className="w-5 h-5 mr-2 dark:text-white" />
-            <h2 className="text-lg font-medium dark:text-white">Sobre</h2>
+            <Info className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Sobre</h2>
           </div>
           
           <div className="space-y-2">
