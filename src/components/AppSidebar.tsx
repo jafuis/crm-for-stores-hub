@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -69,6 +70,7 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [aniversariantesAcknowledged, setAniversariantesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
 
   const isAniversarioHoje = (dataAniversario: string): boolean => {
@@ -104,6 +106,10 @@ export function AppSidebar() {
     const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
     const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
     setTarefasPendentes(pendentes);
+    
+    // Get acknowledged birthdays
+    const acknowledged = localStorage.getItem('aniversariantesAcknowledged') || '[]';
+    setAniversariantesAcknowledged(JSON.parse(acknowledged));
   };
 
   useEffect(() => {
@@ -122,6 +128,14 @@ export function AppSidebar() {
   const toggleMobileMenu = () => {
     setOpenMobile(!openMobile);
   };
+  
+  // Filtered birthdays that haven't been acknowledged
+  const filteredAniversariantes = aniversariantes.filter(
+    aniversariante => !aniversariantesAcknowledged.includes(aniversariante.id)
+  );
+
+  // Check if we have active notifications (unacknowledged birthdays or pending tasks)
+  const hasActiveNotifications = filteredAniversariantes.length > 0 || tarefasPendentes.length > 0;
 
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white dark:bg-gray-800 h-full">
@@ -145,13 +159,13 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     <item.icon className="w-5 h-5" />
-                    {(item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0)) && (
+                    {(item.path === "/notificacoes" && hasActiveNotifications) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
-                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                    {(item.path === "/aniversariantes" && filteredAniversariantes.length > 0) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
@@ -159,11 +173,11 @@ export function AppSidebar() {
                     )}
                   </div>
                   <span>{item.title}</span>
-                  {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
+                  {item.path === "/aniversariantes" && filteredAniversariantes.length > 0 && (
                     <div className="flex items-center gap-1">
                       <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
                       <span className="text-xs bg-pink-100 text-pink-600 dark:bg-pink-900 dark:text-pink-300 px-2 py-0.5 rounded-full">
-                        {aniversariantes.length}
+                        {filteredAniversariantes.length}
                       </span>
                     </div>
                   )}
