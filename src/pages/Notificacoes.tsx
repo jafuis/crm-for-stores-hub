@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,7 +28,6 @@ export default function Notificacoes() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Carregar clientes e verificar aniversários
     const clientesSalvos = localStorage.getItem('clientes');
     const tarefasSalvas = localStorage.getItem('tarefas');
     const acknowledged = localStorage.getItem('aniversariantesAcknowledged') || '[]';
@@ -63,7 +61,6 @@ export default function Notificacoes() {
       setTarefasPendentes(pendentes);
     }
     
-    // Verificar aniversários a cada minuto
     const interval = setInterval(() => {
       const clientesSalvosUpdate = localStorage.getItem('clientes');
       const tarefasSalvasUpdate = localStorage.getItem('tarefas');
@@ -99,11 +96,9 @@ export default function Notificacoes() {
   }, []);
   
   const handleRemoveAniversariante = (id: string) => {
-    // Adicionar ID do aniversariante à lista de reconhecidos
     const updatedAcknowledged = [...aniversariantesAcknowledged, id];
     setAniversariantesAcknowledged(updatedAcknowledged);
     
-    // Salvar no localStorage
     localStorage.setItem('aniversariantesAcknowledged', JSON.stringify(updatedAcknowledged));
     
     toast({
@@ -112,7 +107,6 @@ export default function Notificacoes() {
     });
   };
   
-  // Filtrar aniversariantes reconhecidos
   const aniversariantesFiltrados = aniversariantes.filter(
     aniversariante => !aniversariantesAcknowledged.includes(aniversariante.id)
   );
@@ -189,7 +183,6 @@ export default function Notificacoes() {
                   <Progress 
                     value={0} 
                     className="h-2 bg-gray-100" 
-                    indicatorClassName="bg-blue-500" 
                   />
                 </div>
               ))}
