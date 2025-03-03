@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,15 +25,15 @@ interface Tarefa {
 export default function Notificacoes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const [aniversariantesAcknowledged, setAniversariantesAcknowledged] = useState<string[]>([]);
+  const [notificacoesAcknowledged, setNotificacoesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     const clientesSalvos = localStorage.getItem('clientes');
     const tarefasSalvas = localStorage.getItem('tarefas');
-    const acknowledged = localStorage.getItem('aniversariantesAcknowledged') || '[]';
+    const acknowledged = localStorage.getItem('notificacoesAcknowledged') || '[]';
     
-    setAniversariantesAcknowledged(JSON.parse(acknowledged));
+    setNotificacoesAcknowledged(JSON.parse(acknowledged));
     
     if (clientesSalvos) {
       const clientes: Cliente[] = JSON.parse(clientesSalvos);
@@ -96,10 +97,10 @@ export default function Notificacoes() {
   }, []);
   
   const handleRemoveAniversariante = (id: string) => {
-    const updatedAcknowledged = [...aniversariantesAcknowledged, id];
-    setAniversariantesAcknowledged(updatedAcknowledged);
+    const updatedAcknowledged = [...notificacoesAcknowledged, id];
+    setNotificacoesAcknowledged(updatedAcknowledged);
     
-    localStorage.setItem('aniversariantesAcknowledged', JSON.stringify(updatedAcknowledged));
+    localStorage.setItem('notificacoesAcknowledged', JSON.stringify(updatedAcknowledged));
     
     toast({
       title: "Notificação removida",
@@ -108,7 +109,7 @@ export default function Notificacoes() {
   };
   
   const aniversariantesFiltrados = aniversariantes.filter(
-    aniversariante => !aniversariantesAcknowledged.includes(aniversariante.id)
+    aniversariante => !notificacoesAcknowledged.includes(aniversariante.id)
   );
 
   return (
