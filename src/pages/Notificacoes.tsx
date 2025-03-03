@@ -2,28 +2,17 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Gift, CheckSquare, AlertCircle, Trash2, Trash } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Cake, Trash2, Bell, CheckSquare, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Progress } from "@/components/ui/progress";
 
 interface Cliente {
   id: string;
   nome: string;
   telefone: string;
   aniversario: string;
-  acknowledged?: boolean;
 }
 
 interface Tarefa {
@@ -36,262 +25,185 @@ interface Tarefa {
 export default function Notificacoes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
+  const [aniversariantesAcknowledged, setAniversariantesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
 
-  // Função aprimorada para verificar se é aniversário hoje
-  const isAniversarioHoje = (dataAniversario: string): boolean => {
-    try {
-      // Se a data não estiver definida, retorna falso
-      if (!dataAniversario) return false;
-      
-      // Converter a string para objeto Date
-      const aniversario = parseISO(dataAniversario);
-      
-      // Verificar se a data é válida
-      if (!isValid(aniversario)) {
-        console.log("Data inválida:", dataAniversario);
-        return false;
-      }
-      
-      // Obter a data atual no fuso horário local (Brasil)
-      const hoje = new Date();
-      
-      // Comparação apenas por mês e dia, considerando o fuso horário correto
-      return aniversario.getMonth() === hoje.getMonth() && 
-             aniversario.getDate() === hoje.getDate();
-    } catch (error) {
-      console.error("Erro ao processar data:", dataAniversario, error);
-      return false;
-    }
-  };
-
-  const carregarDados = () => {
-    // Carregar clientes do localStorage
+  useEffect(() => {
+    // Carregar clientes e verificar aniversários
     const clientesSalvos = localStorage.getItem('clientes');
-    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
-    
-    console.log("Total de clientes carregados:", clientes.length);
-    
-    // Carregar acknowledegments
-    const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
-    const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
-    setAcknowledgedBirthdays(acknowledgments);
-    
-    // Filtrar aniversariantes do dia que não foram ignorados
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const ehAniversariante = isAniversarioHoje(cliente.aniversario);
-      const foiIgnorado = acknowledgments[cliente.id];
-      
-      if (ehAniversariante && !foiIgnorado) {
-        console.log("Aniversariante encontrado:", cliente.nome, cliente.aniversario);
-      }
-      return ehAniversariante && !foiIgnorado;
-    });
-    
-    console.log("Aniversariantes hoje (não ignorados):", aniversariantesHoje.length);
-    
-    setAniversariantes(aniversariantesHoje);
-
-    // Carregar tarefas do localStorage
     const tarefasSalvas = localStorage.getItem('tarefas');
-    const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
+    const acknowledged = localStorage.getItem('aniversariantesAcknowledged') || '[]';
     
-    // Filtrar tarefas pendentes
-    const tarefasPendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
-    setTarefasPendentes(tarefasPendentes);
-  };
-
-  useEffect(() => {
-    carregarDados();
+    setAniversariantesAcknowledged(JSON.parse(acknowledged));
     
-    // Adiciona evento para atualizar quando o localStorage for modificado
-    window.addEventListener('storage', carregarDados);
-    
-    // Limpeza
-    return () => {
-      window.removeEventListener('storage', carregarDados);
-    };
-  }, []);
-
-  // Verificar diariamente se é um novo dia para resetar os acknowledgments
-  useEffect(() => {
-    const checkNewDay = () => {
-      const lastDate = localStorage.getItem('lastAcknowledgedDate');
-      const today = format(new Date(), 'yyyy-MM-dd');
+    if (clientesSalvos) {
+      const clientes: Cliente[] = JSON.parse(clientesSalvos);
+      const aniversariantesHoje = clientes.filter(cliente => {
+        try {
+          if (!cliente.aniversario) return false;
+          
+          const aniversario = parseISO(cliente.aniversario);
+          if (!isValid(aniversario)) return false;
+          
+          const hoje = new Date();
+          return aniversario.getDate() === hoje.getDate() && 
+                 aniversario.getMonth() === hoje.getMonth();
+        } catch (error) {
+          console.error("Erro ao verificar aniversário:", error);
+          return false;
+        }
+      });
       
-      if (lastDate !== today) {
-        // Novo dia - limpar todos os acknowledgments
-        localStorage.setItem('acknowledgedBirthdays', JSON.stringify({}));
-        localStorage.setItem('lastAcknowledgedDate', today);
-        setAcknowledgedBirthdays({});
+      setAniversariantes(aniversariantesHoje);
+    }
+    
+    if (tarefasSalvas) {
+      const tarefas: Tarefa[] = JSON.parse(tarefasSalvas);
+      const pendentes = tarefas.filter(tarefa => !tarefa.concluida);
+      setTarefasPendentes(pendentes);
+    }
+    
+    // Verificar aniversários a cada minuto
+    const interval = setInterval(() => {
+      const clientesSalvosUpdate = localStorage.getItem('clientes');
+      const tarefasSalvasUpdate = localStorage.getItem('tarefas');
+      
+      if (clientesSalvosUpdate) {
+        const clientes: Cliente[] = JSON.parse(clientesSalvosUpdate);
+        const aniversariantesHoje = clientes.filter(cliente => {
+          try {
+            if (!cliente.aniversario) return false;
+            
+            const aniversario = parseISO(cliente.aniversario);
+            if (!isValid(aniversario)) return false;
+            
+            const hoje = new Date();
+            return aniversario.getDate() === hoje.getDate() && 
+                   aniversario.getMonth() === hoje.getMonth();
+          } catch (error) {
+            return false;
+          }
+        });
+        
+        setAniversariantes(aniversariantesHoje);
       }
-    };
-
-    checkNewDay();
-    const interval = setInterval(checkNewDay, 60000); // Check every minute
-
+      
+      if (tarefasSalvasUpdate) {
+        const tarefas: Tarefa[] = JSON.parse(tarefasSalvasUpdate);
+        const pendentes = tarefas.filter(tarefa => !tarefa.concluida);
+        setTarefasPendentes(pendentes);
+      }
+    }, 60000);
+    
     return () => clearInterval(interval);
   }, []);
-
-  const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
-    const telefoneFormatado = telefone.replace(/\D/g, '');
-    const mensagem = `Feliz aniversário, ${nome}! 🎉`;
-    const url = `https://wa.me/55${telefoneFormatado}?text=${encodeURIComponent(mensagem)}`;
-    window.open(url, '_blank');
+  
+  const handleRemoveAniversariante = (id: string) => {
+    // Adicionar ID do aniversariante à lista de reconhecidos
+    const updatedAcknowledged = [...aniversariantesAcknowledged, id];
+    setAniversariantesAcknowledged(updatedAcknowledged);
     
-    toast({
-      title: "Mensagem preparada",
-      description: "WhatsApp foi aberto com a mensagem de parabéns!",
-    });
-  };
-
-  const handleRemoveBirthday = (clienteId: string) => {
-    const newAcknowledgments = {
-      ...acknowledgedBirthdays,
-      [clienteId]: true
-    };
-    
-    setAcknowledgedBirthdays(newAcknowledgments);
-    localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
-    localStorage.setItem('lastAcknowledgedDate', format(new Date(), 'yyyy-MM-dd'));
-    
-    // Atualizar o estado dos aniversariantes
-    setAniversariantes(prev => 
-      prev.filter(cliente => cliente.id !== clienteId)
-    );
+    // Salvar no localStorage
+    localStorage.setItem('aniversariantesAcknowledged', JSON.stringify(updatedAcknowledged));
     
     toast({
       title: "Notificação removida",
-      description: "A notificação foi removida com sucesso.",
+      description: "Notificação de aniversário removida com sucesso.",
     });
   };
-
-  const handleRemoveAllBirthdays = () => {
-    // Marcar todos os aniversariantes como acknowledged
-    const newAcknowledgments = { ...acknowledgedBirthdays };
-    aniversariantes.forEach(aniversariante => {
-      newAcknowledgments[aniversariante.id] = true;
-    });
-    
-    setAcknowledgedBirthdays(newAcknowledgments);
-    localStorage.setItem('acknowledgedBirthdays', JSON.stringify(newAcknowledgments));
-    localStorage.setItem('lastAcknowledgedDate', format(new Date(), 'yyyy-MM-dd'));
-    
-    // Limpar a lista de aniversariantes
-    setAniversariantes([]);
-    
-    toast({
-      title: "Notificações removidas",
-      description: "Todas as notificações de aniversário foram removidas.",
-    });
-  };
+  
+  // Filtrar aniversariantes reconhecidos
+  const aniversariantesFiltrados = aniversariantes.filter(
+    aniversariante => !aniversariantesAcknowledged.includes(aniversariante.id)
+  );
 
   return (
-    <div className="space-y-6 animate-fadeIn px-4 md:px-0">
+    <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Notificações</h1>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={carregarDados}>
-            Atualizar
-          </Button>
-          {(aniversariantes.length > 0) && (
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-red-500 border-red-200 hover:bg-red-50">
-                  <Trash className="w-4 h-4 mr-2" />
-                  Limpar Todas
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Remover todas as notificações?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Esta ação não pode ser desfeita. Todas as notificações de aniversário serão removidas.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRemoveAllBirthdays} className="bg-red-500 hover:bg-red-600">
-                    Remover Todas
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
+        <div>
+          <h1 className="text-2xl font-bold">Notificações</h1>
+          <p className="text-muted-foreground">
+            Acompanhe tarefas pendentes e aniversários de clientes
+          </p>
         </div>
       </div>
-
+      
       <div className="grid gap-6">
-        {aniversariantes.length > 0 && (
+        {aniversariantesFiltrados.length > 0 && (
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Gift className="w-5 h-5 text-pink-500" />
-              Aniversários Hoje ({aniversariantes.length})
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <Cake className="w-5 h-5 text-pink-500" />
+              <h2 className="text-lg font-semibold">Aniversariantes de Hoje</h2>
+            </div>
             <div className="space-y-4">
-              {aniversariantes.map((aniversariante) => (
-                <div key={aniversariante.id} className="flex flex-col p-4 border rounded-lg bg-pink-50">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-4 mb-3">
-                      <Gift className="w-6 h-6 text-pink-500 shrink-0" />
-                      <div>
-                        <h3 className="font-medium">{aniversariante.nome}</h3>
-                        <p className="text-sm text-gray-500">Aniversário hoje!</p>
-                        {aniversariante.telefone && (
-                          <p className="text-xs text-gray-600 flex items-center cursor-pointer hover:text-pink-600" 
-                             onClick={() => enviarMensagemWhatsApp(aniversariante.telefone, aniversariante.nome)}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-1 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21" />
-                              <path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1Z" />
-                              <path d="M14 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1Z" />
-                              <path d="M9.5 13.5c.5 1 1.5 1 2 1s2.5 0 3.5-1.5" />
-                            </svg>
-                            {aniversariante.telefone}
-                          </p>
-                        )}
-                      </div>
+              {aniversariantesFiltrados.map((cliente) => (
+                <div
+                  key={cliente.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
+                      <Cake className="w-5 h-5 text-pink-500" />
                     </div>
-                    <Button 
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleRemoveBirthday(aniversariante.id)}
-                      className="text-red-600 hover:bg-red-100 shrink-0"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div>
+                      <p className="font-medium">{cliente.nome}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Aniversário hoje
+                      </p>
+                    </div>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveAniversariante(cliente.id)}
+                  >
+                    <Trash2 className="w-4 h-4 text-gray-500" />
+                  </Button>
                 </div>
               ))}
             </div>
           </Card>
         )}
-
+        
         {tarefasPendentes.length > 0 && (
           <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              Tarefas Pendentes ({tarefasPendentes.length})
-            </h2>
+            <div className="flex items-center gap-2 mb-4">
+              <CheckSquare className="w-5 h-5 text-blue-500" />
+              <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
+            </div>
             <div className="space-y-4">
               {tarefasPendentes.map((tarefa) => (
-                <div key={tarefa.id} className="flex items-center gap-4 p-4 border rounded-lg bg-red-50">
-                  <CheckSquare className="w-6 h-6 text-red-500" />
-                  <div>
-                    <h3 className="font-medium text-red-700">{tarefa.titulo}</h3>
-                    <p className="text-sm text-red-500">Pendente</p>
+                <div
+                  key={tarefa.id}
+                  className="p-4 border rounded-lg"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <CheckSquare className="w-5 h-5 text-blue-500" />
+                      <p className="font-medium">{tarefa.titulo}</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {tarefa.dataVencimento ? format(parseISO(tarefa.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "Sem data"}
+                    </p>
                   </div>
+                  <Progress 
+                    value={0} 
+                    className="h-2 bg-gray-100" 
+                    indicatorClassName="bg-blue-500" 
+                  />
                 </div>
               ))}
             </div>
           </Card>
         )}
-
-        {aniversariantes.length === 0 && tarefasPendentes.length === 0 && (
-          <Card className="p-6">
-            <div className="text-center text-gray-500">
-              <p>Nenhuma notificação no momento.</p>
-            </div>
+        
+        {aniversariantesFiltrados.length === 0 && tarefasPendentes.length === 0 && (
+          <Card className="p-6 flex flex-col items-center justify-center text-center">
+            <Bell className="w-12 h-12 text-gray-300 mb-4" />
+            <h2 className="text-xl font-semibold mb-2">Nenhuma notificação</h2>
+            <p className="text-muted-foreground">
+              Você não tem tarefas pendentes ou aniversários para hoje
+            </p>
           </Card>
         )}
       </div>

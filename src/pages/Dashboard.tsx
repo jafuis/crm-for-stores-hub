@@ -3,10 +3,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar, ChevronDown } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, ChevronDown, Bell, Gift } from "lucide-react";
 
 interface Venda {
   id: string;
@@ -24,6 +24,13 @@ interface Cliente {
   classificacao: number;
 }
 
+interface Tarefa {
+  id: string;
+  titulo: string;
+  concluida: boolean;
+  dataVencimento: string;
+}
+
 export default function Dashboard() {
   const currentDate = new Date();
   const currentMonth = format(currentDate, 'MMMM yyyy', { locale: ptBR });
@@ -32,11 +39,28 @@ export default function Dashboard() {
   const [metaDiaria, setMetaDiaria] = useState<number>(5000);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
+  const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [lastCheckedDay, setLastCheckedDay] = useState<string>('');
+  const [vendasDiaAnterior, setVendasDiaAnterior] = useState<number>(0);
   
+  const isAniversarioHoje = (dataAniversario: string): boolean => {
+    if (!dataAniversario) return false;
+    
+    try {
+      const aniversario = parseISO(dataAniversario);
+      const hoje = new Date();
+      return aniversario.getMonth() === hoje.getMonth() && 
+             aniversario.getDate() === hoje.getDate();
+    } catch (error) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     const vendasSalvas = localStorage.getItem('vendas');
     const clientesSalvos = localStorage.getItem('clientes');
+    const tarefasSalvas = localStorage.getItem('tarefas');
     const metaSalva = localStorage.getItem('metaDiaria');
     const ultimaVerificacao = localStorage.getItem('ultimaVerificacaoMes');
     const ultimoDiaVerificado = localStorage.getItem('ultimoDiaVerificado');
@@ -73,10 +97,37 @@ export default function Dashboard() {
         localStorage.setItem('ultimoDiaVerificado', diaAtual);
         setLastCheckedDay(diaAtual);
       }
+
+      // Calcular vendas do dia anterior
+      const ontem = subDays(new Date(), 1);
+      const vendasDiaAnterior = todasVendas
+        .filter((venda: Venda) => {
+          const dataVenda = parseISO(venda.data);
+          return isWithinInterval(dataVenda, {
+            start: startOfDay(ontem),
+            end: endOfDay(ontem)
+          }) && !venda.arquivada;
+        })
+        .reduce((total: number, venda: Venda) => total + venda.valor, 0);
+      
+      setVendasDiaAnterior(vendasDiaAnterior);
     }
 
     if (clientesSalvos) {
-      setClientes(JSON.parse(clientesSalvos));
+      const clientes = JSON.parse(clientesSalvos);
+      setClientes(clientes);
+      
+      // Verificar aniversariantes
+      const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
+        isAniversarioHoje(cliente.aniversario)
+      );
+      setAniversariantes(aniversariantesHoje);
+    }
+    
+    if (tarefasSalvas) {
+      const tarefas = JSON.parse(tarefasSalvas);
+      const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
+      setTarefasPendentes(pendentes);
     }
 
     if (metaSalva) {
@@ -152,6 +203,13 @@ export default function Dashboard() {
               currency: 'BRL'
             })}
           </div>
+          {/* Adicionando total de vendas do dia anterior */}
+          <div className="text-sm text-muted-foreground">
+            Total de vendas do dia anterior: {vendasDiaAnterior.toLocaleString('pt-BR', {
+              style: 'currency',
+              currency: 'BRL'
+            })}
+          </div>
           <div className="space-y-2">
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>Meta Diária</span>
@@ -200,6 +258,27 @@ export default function Dashboard() {
             })}
           </p>
           <p className="text-sm text-gray-500 mt-1">{currentMonth}</p>
+        </Card>
+
+        {/* Nova card para notificações */}
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-5 h-5 text-[#9b87f5]" />
+            <h3 className="text-sm font-medium text-gray-500">Notificações</h3>
+          </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Tarefas Pendentes</span>
+              <span className="text-xl font-semibold">{tarefasPendentes.length}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm flex items-center">
+                <Gift className="w-4 h-4 mr-1 text-pink-500" />
+                Aniversariantes Hoje
+              </span>
+              <span className="text-xl font-semibold">{aniversariantes.length}</span>
+            </div>
+          </div>
         </Card>
       </div>
     </div>
