@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -55,7 +56,7 @@ const menuItems = [
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
-  { title: "Notificações", icon: Bell, path: "/notificacoes" },
+  { title: "Notificações", icon: Bell, path: "/notificacoes", extraIcon: PartyPopper },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
@@ -69,6 +70,7 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const isAniversarioHoje = (dataAniversario: string): boolean => {
@@ -94,9 +96,18 @@ export function AppSidebar() {
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
-      isAniversarioHoje(cliente.aniversario)
-    );
+    // Carregar acknowledegments
+    const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
+    const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
+    setAcknowledgedBirthdays(acknowledgments);
+    
+    // Filtrar aniversariantes do dia que não foram ignorados
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+      const ehAniversariante = isAniversarioHoje(cliente.aniversario);
+      const foiIgnorado = acknowledgments[cliente.id];
+      
+      return ehAniversariante && !foiIgnorado;
+    });
     
     setAniversariantes(aniversariantesHoje);
 
