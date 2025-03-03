@@ -56,7 +56,7 @@ const menuItems = [
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
-  { title: "Notificações", icon: Bell, path: "/notificacoes", extraIcon: PartyPopper },
+  { title: "Notificações", icon: Bell, path: "/notificacoes" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
@@ -96,18 +96,15 @@ export function AppSidebar() {
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
-    // Carregar acknowledegments
+    // Carregar acknowledgments
     const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
     const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
     setAcknowledgedBirthdays(acknowledgments);
     
-    // Filtrar aniversariantes do dia que não foram ignorados
-    const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-      const ehAniversariante = isAniversarioHoje(cliente.aniversario);
-      const foiIgnorado = acknowledgments[cliente.id];
-      
-      return ehAniversariante && !foiIgnorado;
-    });
+    // Filtrar aniversariantes do dia
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
+      isAniversarioHoje(cliente.aniversario)
+    );
     
     setAniversariantes(aniversariantesHoje);
 
@@ -156,16 +153,18 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     <item.icon className="w-5 h-5" />
-                    {(item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0)) && (
-                      <>
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                      </>
-                    )}
+                    {/* Mostrar notificação apenas na aba Aniversariantes */}
                     {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                      </>
+                    )}
+                    {/* Notificação para tarefas pendentes na aba Notificações */}
+                    {(item.path === "/notificacoes" && tarefasPendentes.length > 0) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
                   </div>
