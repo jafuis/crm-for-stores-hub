@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -70,7 +69,6 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const [acknowledgedBirthdays, setAcknowledgedBirthdays] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   const isAniversarioHoje = (dataAniversario: string): boolean => {
@@ -96,12 +94,6 @@ export function AppSidebar() {
     const clientesSalvos = localStorage.getItem('clientes');
     const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
     
-    // Carregar acknowledgments
-    const savedAcknowledgments = localStorage.getItem('acknowledgedBirthdays');
-    const acknowledgments = savedAcknowledgments ? JSON.parse(savedAcknowledgments) : {};
-    setAcknowledgedBirthdays(acknowledgments);
-    
-    // Filtrar aniversariantes do dia
     const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
       isAniversarioHoje(cliente.aniversario)
     );
@@ -153,18 +145,16 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     <item.icon className="w-5 h-5" />
-                    {/* Mostrar notificação apenas na aba Aniversariantes */}
+                    {(item.path === "/notificacoes" && (aniversariantes.length > 0 || tarefasPendentes.length > 0)) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      </>
+                    )}
                     {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
-                      </>
-                    )}
-                    {/* Notificação para tarefas pendentes na aba Notificações */}
-                    {(item.path === "/notificacoes" && tarefasPendentes.length > 0) && (
-                      <>
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
                   </div>
