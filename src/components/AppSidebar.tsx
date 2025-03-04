@@ -159,12 +159,14 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     <item.icon className="w-5 h-5" />
+                    {/* Only show notification indicator on the notifications page if there are active notifications */}
                     {(item.path === "/notificacoes" && hasActiveNotifications) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
+                    {/* Always show notification indicator for aniversariantes if there are any birthdays */}
                     {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />

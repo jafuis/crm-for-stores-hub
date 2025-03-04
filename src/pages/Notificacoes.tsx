@@ -100,6 +100,7 @@ export default function Notificacoes() {
     const updatedAcknowledged = [...notificacoesAcknowledged, id];
     setNotificacoesAcknowledged(updatedAcknowledged);
     
+    // Only update the notifications acknowledged in localStorage - won't affect Aniversariantes page
     localStorage.setItem('notificacoesAcknowledged', JSON.stringify(updatedAcknowledged));
     
     toast({
