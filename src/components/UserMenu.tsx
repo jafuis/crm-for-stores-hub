@@ -48,12 +48,6 @@ export function UserMenu() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to="/minha-conta" className="flex items-center">
-            <User className="mr-2 h-4 w-4" />
-            Minha Conta
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
           <Link to="/configuracoes" className="flex items-center">
             <Settings className="mr-2 h-4 w-4" />
             Configurações

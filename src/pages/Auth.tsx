@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResetMode, setIsResetMode] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -142,6 +144,101 @@ export default function Auth() {
     }
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        console.error("Erro ao solicitar redefinição de senha:", error);
+        toast({
+          title: "Erro na solicitação",
+          description: "Não foi possível processar sua solicitação. Verifique o email e tente novamente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Email enviado",
+          description: "Verifique seu email para instruções de redefinição de senha.",
+        });
+        setIsResetMode(false);
+      }
+    } catch (error) {
+      console.error("Erro ao solicitar redefinição de senha:", error);
+      toast({
+        title: "Erro na solicitação",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Display password reset form
+  if (isResetMode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
+        <Card className="w-full max-w-md p-6">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold">SUPER CRM</h1>
+            <p className="text-muted-foreground">Recuperação de senha</p>
+          </div>
+
+          <form onSubmit={handlePasswordReset} className="space-y-4">
+            <div className="space-y-2">
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  className="pl-10"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  required
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <Button
+              className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
+              disabled={loading}
+              type="submit"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Enviar link de recuperação
+                </>
+              )}
+            </Button>
+
+            <div className="text-center mt-4">
+              <Button
+                variant="link"
+                className="text-sm"
+                onClick={() => setIsResetMode(false)}
+                disabled={loading}
+              >
+                Voltar ao login
+              </Button>
+            </div>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
       <Card className="w-full max-w-md p-6">
@@ -221,6 +318,17 @@ export default function Auth() {
                   </>
                 )}
               </Button>
+              
+              <div className="text-center mt-2">
+                <Button 
+                  variant="link" 
+                  className="text-sm"
+                  onClick={() => setIsResetMode(true)}
+                  disabled={loading}
+                >
+                  Esqueci minha senha
+                </Button>
+              </div>
             </form>
           </TabsContent>
 

@@ -5,22 +5,46 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Configuracoes() {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isValidating, setIsValidating] = useState(false);
 
-  const deleteAccount = async () => {
-    if (!user) return;
-    
-    setIsDeleting(true);
+  const handleDeleteAccount = async () => {
+    setIsValidating(true);
     
     try {
+      // First, verify the user's credentials
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (signInError) {
+        toast({
+          title: "Erro de autenticação",
+          description: "Email ou senha incorretos. Por favor, verifique suas credenciais.",
+          variant: "destructive",
+        });
+        setIsValidating(false);
+        return;
+      }
+      
+      // If validation successful, proceed with account deletion
+      setIsValidating(false);
+      setIsDeleting(true);
+      
       // Call the RPC function to delete user data
       const { error: rpcError } = await supabase.rpc('delete_user');
       
@@ -28,7 +52,7 @@ export default function Configuracoes() {
       
       // Call Edge Function to delete auth user
       const { error: edgeFnError } = await supabase.functions.invoke('delete-user', {
-        body: { userId: user.id }
+        body: { userId: user?.id }
       });
       
       if (edgeFnError) throw edgeFnError;
@@ -47,14 +71,8 @@ export default function Configuracoes() {
         variant: "destructive",
       });
       setIsDeleting(false);
+      setIsValidating(false);
     }
-  };
-
-  const handleNotificationToggle = (value: boolean) => {
-    toast({
-      title: value ? "Notificações ativadas" : "Notificações desativadas",
-      description: value ? "Você receberá notificações do sistema" : "Você não receberá mais notificações do sistema",
-    });
   };
 
   const handleThemeToggle = (value: boolean) => {
@@ -68,59 +86,11 @@ export default function Configuracoes() {
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">Configurações</h1>
       
-      <Tabs defaultValue="geral" className="w-full">
+      <Tabs defaultValue="aparencia" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="geral">Geral</TabsTrigger>
-          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
           <TabsTrigger value="aparencia">Aparência</TabsTrigger>
           <TabsTrigger value="conta">Conta</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="geral">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações Gerais</CardTitle>
-              <CardDescription>Gerencie as configurações gerais do sistema</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="idioma">Idioma</Label>
-                <select id="idioma" className="border rounded p-2">
-                  <option value="pt-BR">Português (Brasil)</option>
-                  <option value="en-US">English (US)</option>
-                  <option value="es">Español</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="fuso-horario">Fuso Horário</Label>
-                <select id="fuso-horario" className="border rounded p-2">
-                  <option value="America/Sao_Paulo">Brasília (GMT-3)</option>
-                  <option value="America/New_York">Nova York (GMT-5)</option>
-                  <option value="Europe/London">Londres (GMT+0)</option>
-                </select>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="notificacoes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Configurações de Notificações</CardTitle>
-              <CardDescription>Gerencie como você recebe notificações</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="email-notif">Notificações por E-mail</Label>
-                <Switch id="email-notif" onCheckedChange={handleNotificationToggle} />
-              </div>
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="push-notif">Notificações Push</Label>
-                <Switch id="push-notif" onCheckedChange={handleNotificationToggle} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
         
         <TabsContent value="aparencia">
           <Card>
@@ -163,7 +133,7 @@ export default function Configuracoes() {
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" disabled={isDeleting}>
-                    {isDeleting ? "Excluindo..." : "Excluir Minha Conta"}
+                    {isDeleting ? "Excluindo..." : "Excluir minha conta"}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -174,10 +144,53 @@ export default function Configuracoes() {
                       e removerá seus dados de nossos servidores.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
+                  
+                  <div className="space-y-4 py-3">
+                    <p className="text-sm font-medium">Para confirmar, digite seu email e senha:</p>
+                    <div className="space-y-3">
+                      <Input
+                        type="email"
+                        placeholder="Seu email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={isValidating || isDeleting}
+                      />
+                      
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Sua senha"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          disabled={isValidating || isDeleting}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-3"
+                          disabled={isValidating || isDeleting}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={deleteAccount}>
-                      Sim, excluir minha conta
+                    <AlertDialogCancel disabled={isValidating || isDeleting}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteAccount();
+                      }}
+                      disabled={!email || !password || isValidating || isDeleting}
+                    >
+                      {isValidating ? "Verificando..." : isDeleting ? "Excluindo..." : "Sim, excluir minha conta"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
