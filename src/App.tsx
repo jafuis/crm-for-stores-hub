@@ -1,56 +1,46 @@
 
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import { AppLayout } from "@/components/AppLayout";
-import NotFound from "@/pages/NotFound";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "@/pages/Dashboard";
+import Auth from "@/pages/Auth";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthGuard } from "@/components/AuthGuard";
+import { AppLayout } from "@/components/AppLayout";
 import Clientes from "@/pages/Clientes";
 import Vendas from "@/pages/Vendas";
-import Estoque from "@/pages/Estoque";
 import Fornecedores from "@/pages/Fornecedores";
 import Tarefas from "@/pages/Tarefas";
 import Notificacoes from "@/pages/Notificacoes";
 import Aniversariantes from "@/pages/Aniversariantes";
+import Estoque from "@/pages/Estoque";
 import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
 import NovosProjetos from "@/pages/NovosProjetos";
-import Auth from "@/pages/Auth";
-import { Outlet } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { AuthGuard } from "@/components/AuthGuard";
+import MinhaConta from "@/pages/MinhaConta";
+import NotFound from "@/pages/NotFound";
 
 function App() {
   return (
     <AuthProvider>
-      <RouterProvider
-        router={createBrowserRouter([
-          {
-            path: "/auth",
-            element: <Auth />,
-          },
-          {
-            path: "/",
-            element: (
-              <AuthGuard>
-                <AppLayout><Outlet /></AppLayout>
-              </AuthGuard>
-            ),
-            errorElement: <NotFound />,
-            children: [
-              { path: "/", element: <Dashboard /> },
-              { path: "/clientes", element: <Clientes /> },
-              { path: "/vendas", element: <Vendas /> },
-              { path: "/estoque", element: <Estoque /> },
-              { path: "/fornecedores", element: <Fornecedores /> },
-              { path: "/tarefas", element: <Tarefas /> },
-              { path: "/notificacoes", element: <Notificacoes /> },
-              { path: "/aniversariantes", element: <Aniversariantes /> },
-              { path: "/relatorios", element: <Relatorios /> },
-              { path: "/configuracoes", element: <Configuracoes /> },
-              { path: "/novos-projetos", element: <NovosProjetos /> },
-            ],
-          },
-        ])}
-      />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/auth" element={<AuthGuard><Auth /></AuthGuard>} />
+          <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/clientes" element={<Clientes />} />
+            <Route path="/vendas" element={<Vendas />} />
+            <Route path="/estoque" element={<Estoque />} />
+            <Route path="/fornecedores" element={<Fornecedores />} />
+            <Route path="/tarefas" element={<Tarefas />} />
+            <Route path="/notificacoes" element={<Notificacoes />} />
+            <Route path="/aniversariantes" element={<Aniversariantes />} />
+            <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/novos-projetos" element={<NovosProjetos />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
+            <Route path="/minha-conta" element={<MinhaConta />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
     </AuthProvider>
   );
 }

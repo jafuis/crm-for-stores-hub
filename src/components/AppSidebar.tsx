@@ -13,7 +13,8 @@ import {
   MessageSquare,
   PartyPopper,
   FileText,
-  Lightbulb
+  Lightbulb,
+  User
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +62,7 @@ const menuItems = [
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
+  { title: "Minha Conta", icon: User, path: "/minha-conta" },
 ];
 
 export function AppSidebar() {

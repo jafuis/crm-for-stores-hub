@@ -40,7 +40,7 @@ export function UserMenu() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+        <DropdownMenuLabel>Opções</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           {user?.email || "Usuário"}

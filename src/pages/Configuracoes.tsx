@@ -9,14 +9,20 @@ import {
   Trash, 
   Info, 
   Database, 
-  Lock 
+  Lock, 
+  UserX 
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Configuracoes() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
   const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
@@ -127,6 +133,34 @@ export default function Configuracoes() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.")) {
+      try {
+        const { error } = await supabase.rpc('delete_user');
+        
+        if (error) {
+          throw error;
+        }
+        
+        await supabase.auth.signOut();
+        
+        toast({
+          title: "Conta excluída",
+          description: "Sua conta foi excluída com sucesso",
+        });
+        
+        navigate("/auth");
+      } catch (error: any) {
+        console.error("Erro ao excluir conta:", error);
+        toast({
+          title: "Erro ao excluir conta",
+          description: "Ocorreu um erro ao tentar excluir sua conta",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
@@ -218,11 +252,11 @@ export default function Configuracoes() {
               
               <Button 
                 variant="destructive" 
-                onClick={handleClearData}
+                onClick={handleDeleteAccount}
                 className="w-full justify-start"
               >
-                <Trash className="w-4 h-4 mr-2" />
-                Limpar todos os dados
+                <UserX className="w-4 h-4 mr-2" />
+                Excluir minha conta
               </Button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export default function Auth() {
   const [signupData, setSignupData] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
     fullName: "",
   });
 
@@ -83,6 +85,16 @@ export default function Auth() {
       return;
     }
 
+    if (signupData.password !== signupData.confirmPassword) {
+      toast({
+        title: "Erro ao criar conta",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error } = await supabase.auth.signUp({
         email: signupData.email,
@@ -92,6 +104,7 @@ export default function Auth() {
             full_name: signupData.fullName,
             area: "usuario",
           },
+          emailRedirectTo: window.location.origin + "/auth",
         },
       });
 
@@ -133,7 +146,7 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
       <Card className="w-full max-w-md p-6">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold">JáFui CRM</h1>
+          <h1 className="text-2xl font-bold">SUPER CRM</h1>
           <p className="text-muted-foreground">Faça login ou crie sua conta</p>
         </div>
 
@@ -273,6 +286,23 @@ export default function Auth() {
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     )}
                   </button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="relative">
+                  <Key className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Repita a senha"
+                    className="pl-10 pr-10"
+                    value={signupData.confirmPassword}
+                    onChange={(e) =>
+                      setSignupData({ ...signupData, confirmPassword: e.target.value })
+                    }
+                    required
+                    disabled={loading}
+                  />
                 </div>
               </div>
 
