@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Mail, Key, Eye, EyeOff, UserPlus, LogIn } from "lucide-react";
+import { Mail, Key, Eye, EyeOff, UserPlus, LogIn, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Auth() {
@@ -37,9 +36,18 @@ export default function Auth() {
       });
 
       if (error) {
+        console.error("Erro de login:", error);
+        let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
+        
+        if (error.message.includes("Invalid login credentials")) {
+          errorMessage = "Email ou senha incorretos. Verifique suas credenciais.";
+        } else if (error.message.includes("Email not confirmed")) {
+          errorMessage = "Por favor, confirme seu email antes de fazer login.";
+        }
+        
         toast({
           title: "Erro ao fazer login",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -50,6 +58,7 @@ export default function Auth() {
         navigate("/");
       }
     } catch (error) {
+      console.error("Erro de autenticação:", error);
       toast({
         title: "Erro ao fazer login",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -81,14 +90,24 @@ export default function Auth() {
         options: {
           data: {
             full_name: signupData.fullName,
+            area: "usuario",
           },
         },
       });
 
       if (error) {
+        console.error("Erro de cadastro:", error);
+        let errorMessage = "Ocorreu um erro inesperado. Tente novamente.";
+        
+        if (error.message.includes("already registered")) {
+          errorMessage = "Este email já está cadastrado. Tente fazer login.";
+        } else if (error.message.includes("password")) {
+          errorMessage = "A senha deve ter pelo menos 6 caracteres.";
+        }
+        
         toast({
           title: "Erro ao criar conta",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       } else {
@@ -99,6 +118,7 @@ export default function Auth() {
         navigate("/");
       }
     } catch (error) {
+      console.error("Erro de registro:", error);
       toast({
         title: "Erro ao criar conta",
         description: "Ocorreu um erro inesperado. Tente novamente.",
@@ -137,6 +157,7 @@ export default function Auth() {
                       setLoginData({ ...loginData, email: e.target.value })
                     }
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -153,11 +174,13 @@ export default function Auth() {
                       setLoginData({ ...loginData, password: e.target.value })
                     }
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3"
+                    disabled={loading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -173,8 +196,17 @@ export default function Auth() {
                 disabled={loading}
                 type="submit"
               >
-                <LogIn className="mr-2 h-4 w-4" />
-                {loading ? "Entrando..." : "Entrar"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Entrar
+                  </>
+                )}
               </Button>
             </form>
           </TabsContent>
@@ -193,6 +225,7 @@ export default function Auth() {
                       setSignupData({ ...signupData, email: e.target.value })
                     }
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -209,6 +242,7 @@ export default function Auth() {
                       setSignupData({ ...signupData, fullName: e.target.value })
                     }
                     required
+                    disabled={loading}
                   />
                 </div>
               </div>
@@ -225,11 +259,13 @@ export default function Auth() {
                       setSignupData({ ...signupData, password: e.target.value })
                     }
                     required
+                    disabled={loading}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-3"
+                    disabled={loading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -245,8 +281,17 @@ export default function Auth() {
                 disabled={loading}
                 type="submit"
               >
-                <UserPlus className="mr-2 h-4 w-4" />
-                {loading ? "Criando conta..." : "Criar conta"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Criando conta...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Criar conta
+                  </>
+                )}
               </Button>
             </form>
           </TabsContent>
