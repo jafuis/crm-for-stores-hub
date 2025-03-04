@@ -23,7 +23,7 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/auth" element={<AuthGuard><Auth /></AuthGuard>} />
+          <Route path="/auth" element={<Auth />} />
           <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clientes" element={<Clientes />} />

@@ -1,287 +1,191 @@
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Settings, 
-  Sun, 
-  Moon, 
-  Bell, 
-  Trash, 
-  Info, 
-  Database, 
-  Lock, 
-  UserX 
-} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Configuracoes() {
   const { toast } = useToast();
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
-  const [autoSaveEnabled, setAutoSaveEnabled] = useState<boolean>(true);
+  const { user, signOut } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const deleteAccount = async () => {
+    if (!user) return;
     
-    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
-      setIsDarkMode(true);
-      document.documentElement.classList.add("dark");
-    } else {
-      setIsDarkMode(false);
-      document.documentElement.classList.remove("dark");
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    setIsDarkMode(prev => {
-      const newMode = !prev;
-      if (newMode) {
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("theme", "dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-        localStorage.setItem("theme", "light");
-      }
-      return newMode;
-    });
-
-    toast({
-      title: isDarkMode ? "Modo claro ativado" : "Modo escuro ativado",
-      description: "O tema foi alterado com sucesso",
-    });
-  };
-
-  const handleClearData = () => {
-    if (confirm("Tem certeza que deseja limpar todos os dados do aplicativo? Esta ação não pode ser desfeita.")) {
-      const keysToPreserve = ["theme"];
-      
-      const allKeys = Object.keys(localStorage);
-      
-      allKeys.forEach(key => {
-        if (!keysToPreserve.includes(key)) {
-          localStorage.removeItem(key);
-        }
-      });
-      
-      toast({
-        title: "Dados limpos",
-        description: "Todos os dados do aplicativo foram removidos",
-      });
-    }
-  };
-
-  const toggleNotifications = () => {
-    setNotificationsEnabled(prev => !prev);
-    toast({
-      title: notificationsEnabled ? "Notificações desativadas" : "Notificações ativadas",
-      description: notificationsEnabled ? "Você não receberá mais notificações" : "Você receberá notificações",
-    });
-  };
-
-  const toggleAutoSave = () => {
-    setAutoSaveEnabled(prev => !prev);
-    toast({
-      title: autoSaveEnabled ? "Salvamento automático desativado" : "Salvamento automático ativado",
-      description: autoSaveEnabled ? "Os dados não serão salvos automaticamente" : "Os dados serão salvos automaticamente",
-    });
-  };
-
-  const exportData = () => {
+    setIsDeleting(true);
+    
     try {
-      const data: Record<string, any> = {};
-      Object.keys(localStorage).forEach(key => {
-        if (key !== "theme") {
-          try {
-            data[key] = JSON.parse(localStorage.getItem(key) || "null");
-          } catch {
-            data[key] = localStorage.getItem(key);
-          }
-        }
+      // Call the RPC function to delete user data
+      const { error: rpcError } = await supabase.rpc('delete_user');
+      
+      if (rpcError) throw rpcError;
+      
+      // Call Edge Function to delete auth user
+      const { error: edgeFnError } = await supabase.functions.invoke('delete-user', {
+        body: { userId: user.id }
       });
       
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
+      if (edgeFnError) throw edgeFnError;
       
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `backup-dados-${new Date().toISOString().split("T")[0]}.json`;
-      document.body.appendChild(a);
-      a.click();
-      
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Sign out the user
+      await signOut();
       
       toast({
-        title: "Dados exportados",
-        description: "Os dados foram exportados com sucesso",
+        title: "Conta excluída",
+        description: "Sua conta foi excluída com sucesso",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Erro ao exportar dados",
-        description: "Ocorreu um erro ao exportar os dados",
+        title: "Erro ao excluir conta",
+        description: error.message || "Ocorreu um erro ao excluir sua conta",
         variant: "destructive",
       });
-      console.error("Erro ao exportar dados:", error);
+      setIsDeleting(false);
     }
   };
 
-  const handleDeleteAccount = async () => {
-    if (confirm("Tem certeza que deseja excluir sua conta? Esta ação não pode ser desfeita.")) {
-      try {
-        const { error } = await supabase.rpc('delete_user');
-        
-        if (error) {
-          throw error;
-        }
-        
-        await supabase.auth.signOut();
-        
-        toast({
-          title: "Conta excluída",
-          description: "Sua conta foi excluída com sucesso",
-        });
-        
-        navigate("/auth");
-      } catch (error: any) {
-        console.error("Erro ao excluir conta:", error);
-        toast({
-          title: "Erro ao excluir conta",
-          description: "Ocorreu um erro ao tentar excluir sua conta",
-          variant: "destructive",
-        });
-      }
-    }
+  const handleNotificationToggle = (value: boolean) => {
+    toast({
+      title: value ? "Notificações ativadas" : "Notificações desativadas",
+      description: value ? "Você receberá notificações do sistema" : "Você não receberá mais notificações do sistema",
+    });
+  };
+
+  const handleThemeToggle = (value: boolean) => {
+    toast({
+      title: value ? "Tema escuro ativado" : "Tema claro ativado",
+      description: "A aparência do sistema foi alterada",
+    });
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações</h1>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-6 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            {isDarkMode ? 
-              <Moon className="w-5 h-5 mr-2 text-gray-900 dark:text-white" /> : 
-              <Sun className="w-5 h-5 mr-2 text-gray-900" />
-            }
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Aparência</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">Modo escuro</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Alterne entre o modo claro e escuro
+    <div className="container mx-auto py-8">
+      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
+      
+      <Tabs defaultValue="geral" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="notificacoes">Notificações</TabsTrigger>
+          <TabsTrigger value="aparencia">Aparência</TabsTrigger>
+          <TabsTrigger value="conta">Conta</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="geral">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações Gerais</CardTitle>
+              <CardDescription>Gerencie as configurações gerais do sistema</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="idioma">Idioma</Label>
+                <select id="idioma" className="border rounded p-2">
+                  <option value="pt-BR">Português (Brasil)</option>
+                  <option value="en-US">English (US)</option>
+                  <option value="es">Español</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="fuso-horario">Fuso Horário</Label>
+                <select id="fuso-horario" className="border rounded p-2">
+                  <option value="America/Sao_Paulo">Brasília (GMT-3)</option>
+                  <option value="America/New_York">Nova York (GMT-5)</option>
+                  <option value="Europe/London">Londres (GMT+0)</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="notificacoes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações de Notificações</CardTitle>
+              <CardDescription>Gerencie como você recebe notificações</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="email-notif">Notificações por E-mail</Label>
+                <Switch id="email-notif" onCheckedChange={handleNotificationToggle} />
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="push-notif">Notificações Push</Label>
+                <Switch id="push-notif" onCheckedChange={handleNotificationToggle} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="aparencia">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações de Aparência</CardTitle>
+              <CardDescription>Personalize a aparência do sistema</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="tema-escuro">Tema Escuro</Label>
+                <Switch id="tema-escuro" onCheckedChange={handleThemeToggle} />
+              </div>
+              <div className="flex items-center justify-between space-x-2">
+                <Label htmlFor="tamanho-fonte">Tamanho da Fonte</Label>
+                <select id="tamanho-fonte" className="border rounded p-2">
+                  <option value="small">Pequena</option>
+                  <option value="medium">Média</option>
+                  <option value="large">Grande</option>
+                </select>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="conta">
+          <Card>
+            <CardHeader>
+              <CardTitle>Configurações da Conta</CardTitle>
+              <CardDescription>Gerencie suas informações de conta</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <h3 className="font-medium text-destructive">Zona de Perigo</h3>
+                <p className="text-sm text-gray-500">
+                  Atenção! As ações abaixo são irreversíveis.
                 </p>
               </div>
-              <Switch 
-                checked={isDarkMode} 
-                onCheckedChange={toggleTheme} 
-                aria-label="Alternar tema"
-              />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            <Bell className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Notificações</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">Ativar notificações</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Receba alertas sobre eventos importantes
-                </p>
-              </div>
-              <Switch 
-                checked={notificationsEnabled} 
-                onCheckedChange={toggleNotifications} 
-                aria-label="Ativar notificações"
-              />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            <Database className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Dados</h2>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-gray-900 dark:text-white">Salvamento automático</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Salvar alterações automaticamente
-                </p>
-              </div>
-              <Switch 
-                checked={autoSaveEnabled} 
-                onCheckedChange={toggleAutoSave} 
-                aria-label="Ativar salvamento automático"
-              />
-            </div>
-
-            <Separator className="dark:bg-gray-700" />
-
-            <div className="flex flex-col space-y-2">
-              <Button 
-                variant="outline" 
-                onClick={exportData}
-                className="w-full justify-start text-gray-900 dark:text-white dark:border-gray-700 dark:hover:bg-gray-700"
-              >
-                <Database className="w-4 h-4 mr-2" />
-                Exportar dados
-              </Button>
-              
-              <Button 
-                variant="destructive" 
-                onClick={handleDeleteAccount}
-                className="w-full justify-start"
-              >
-                <UserX className="w-4 h-4 mr-2" />
-                Excluir minha conta
-              </Button>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            <Info className="w-5 h-5 mr-2 text-gray-900 dark:text-white" />
-            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Sobre</h2>
-          </div>
-          
-          <div className="space-y-2">
-            <p className="text-sm dark:text-gray-300">
-              <span className="font-medium dark:text-white">Versão:</span> 1.0.0
-            </p>
-            <p className="text-sm dark:text-gray-300">
-              <span className="font-medium dark:text-white">Atualizado em:</span> {new Date().toLocaleDateString('pt-BR')}
-            </p>
-            <Separator className="my-2 dark:bg-gray-700" />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Todos os direitos reservados garimpodeofertas © {new Date().getFullYear()}
-            </p>
-          </div>
-        </Card>
-      </div>
+            </CardContent>
+            <CardFooter>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" disabled={isDeleting}>
+                    {isDeleting ? "Excluindo..." : "Excluir Minha Conta"}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Esta ação não pode ser desfeita. Isso excluirá permanentemente sua conta
+                      e removerá seus dados de nossos servidores.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={deleteAccount}>
+                      Sim, excluir minha conta
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

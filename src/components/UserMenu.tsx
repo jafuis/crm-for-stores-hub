@@ -10,7 +10,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function UserMenu() {
   const { user, signOut } = useAuth();
@@ -44,6 +45,19 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem disabled>
           {user?.email || "Usuário"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/minha-conta" className="flex items-center">
+            <User className="mr-2 h-4 w-4" />
+            Minha Conta
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/configuracoes" className="flex items-center">
+            <Settings className="mr-2 h-4 w-4" />
+            Configurações
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="text-red-500">
