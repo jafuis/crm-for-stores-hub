@@ -1,12 +1,10 @@
 
+import { Outlet } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
-import { useToast } from "@/hooks/use-toast";
 import { UserMenu } from "./UserMenu";
 
-export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { toast } = useToast();
-
+export function AppLayout() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50 dark:bg-gray-900">
@@ -15,7 +13,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="fixed top-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-b dark:border-gray-700 z-40 flex justify-end items-center px-4">
             <UserMenu />
           </div>
-          {children}
+          <Outlet />
         </main>
       </div>
     </SidebarProvider>
