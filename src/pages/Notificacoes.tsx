@@ -7,6 +7,8 @@ import { ptBR } from "date-fns/locale";
 import { Cake, Trash2, Bell, CheckSquare, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Cliente {
   id: string;
@@ -27,74 +29,94 @@ export default function Notificacoes() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [notificacoesAcknowledged, setNotificacoesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const clientesSalvos = localStorage.getItem('clientes');
-    const tarefasSalvas = localStorage.getItem('tarefas');
+    // Carregar notificações reconhecidas do localStorage
     const acknowledged = localStorage.getItem('notificacoesAcknowledged') || '[]';
-    
     setNotificacoesAcknowledged(JSON.parse(acknowledged));
     
-    if (clientesSalvos) {
-      const clientes: Cliente[] = JSON.parse(clientesSalvos);
-      const aniversariantesHoje = clientes.filter(cliente => {
-        try {
-          if (!cliente.aniversario) return false;
-          
-          const aniversario = parseISO(cliente.aniversario);
-          if (!isValid(aniversario)) return false;
-          
-          const hoje = new Date();
-          return aniversario.getDate() === hoje.getDate() && 
-                 aniversario.getMonth() === hoje.getMonth();
-        } catch (error) {
-          console.error("Erro ao verificar aniversário:", error);
-          return false;
-        }
-      });
-      
-      setAniversariantes(aniversariantesHoje);
+    if (user) {
+      fetchAniversariantes();
+      fetchTarefasPendentes();
+    } else {
+      setLoading(false);
     }
-    
-    if (tarefasSalvas) {
-      const tarefas: Tarefa[] = JSON.parse(tarefasSalvas);
-      const pendentes = tarefas.filter(tarefa => !tarefa.concluida);
-      setTarefasPendentes(pendentes);
-    }
-    
-    const interval = setInterval(() => {
-      const clientesSalvosUpdate = localStorage.getItem('clientes');
-      const tarefasSalvasUpdate = localStorage.getItem('tarefas');
+  }, [user]);
+  
+  async function fetchAniversariantes() {
+    try {
+      const hoje = new Date();
+      const mesAtual = hoje.getMonth() + 1; // getMonth retorna 0-11
+      const diaAtual = hoje.getDate();
       
-      if (clientesSalvosUpdate) {
-        const clientes: Cliente[] = JSON.parse(clientesSalvosUpdate);
-        const aniversariantesHoje = clientes.filter(cliente => {
+      // Buscar clientes do banco de dados
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*');
+
+      if (error) {
+        throw error;
+      }
+
+      // Filtrar aniversariantes de hoje
+      const aniversariantesHoje = data
+        .filter(cliente => {
+          if (!cliente.birthday) return false;
+          
           try {
-            if (!cliente.aniversario) return false;
-            
-            const aniversario = parseISO(cliente.aniversario);
+            const aniversario = parseISO(cliente.birthday);
             if (!isValid(aniversario)) return false;
             
-            const hoje = new Date();
-            return aniversario.getDate() === hoje.getDate() && 
-                   aniversario.getMonth() === hoje.getMonth();
+            const mesAniversario = aniversario.getMonth() + 1;
+            const diaAniversario = aniversario.getDate();
+            
+            return diaAniversario === diaAtual && mesAniversario === mesAtual;
           } catch (error) {
+            console.error("Erro ao verificar aniversário:", error);
             return false;
           }
-        });
-        
-        setAniversariantes(aniversariantesHoje);
-      }
+        })
+        .map(cliente => ({
+          id: cliente.id,
+          nome: cliente.name,
+          telefone: cliente.phone || '',
+          aniversario: cliente.birthday
+        }));
       
-      if (tarefasSalvasUpdate) {
-        const tarefas: Tarefa[] = JSON.parse(tarefasSalvasUpdate);
-        const pendentes = tarefas.filter(tarefa => !tarefa.concluida);
-        setTarefasPendentes(pendentes);
+      setAniversariantes(aniversariantesHoje);
+    } catch (error) {
+      console.error("Erro ao buscar aniversariantes:", error);
+    }
+  }
+  
+  async function fetchTarefasPendentes() {
+    try {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('status', 'pending');
+
+      if (error) {
+        throw error;
       }
-    }, 60000);
-    
-    return () => clearInterval(interval);
-  }, []);
+
+      // Transformar os dados do banco para o formato que usamos na interface
+      const tarefasFormatadas = data.map(task => ({
+        id: task.id,
+        titulo: task.title,
+        concluida: false,
+        dataVencimento: task.due_date || new Date().toISOString().split('T')[0]
+      }));
+
+      setTarefasPendentes(tarefasFormatadas);
+    } catch (error) {
+      console.error("Erro ao buscar tarefas pendentes:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
   
   const handleRemoveAniversariante = (id: string) => {
     const updatedAcknowledged = [...notificacoesAcknowledged, id];
@@ -112,6 +134,14 @@ export default function Notificacoes() {
   const aniversariantesFiltrados = aniversariantes.filter(
     aniversariante => !notificacoesAcknowledged.includes(aniversariante.id)
   );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

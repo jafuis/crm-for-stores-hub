@@ -12,34 +12,46 @@ import Notificacoes from "@/pages/Notificacoes";
 import Aniversariantes from "@/pages/Aniversariantes";
 import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
-// Add the new NovosProjetos import
 import NovosProjetos from "@/pages/NovosProjetos";
+import Auth from "@/pages/Auth";
 import { Outlet } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthGuard } from "@/components/AuthGuard";
 
 function App() {
   return (
-    <RouterProvider
-      router={createBrowserRouter([
-        {
-          path: "/",
-          element: <AppLayout><Outlet /></AppLayout>,
-          errorElement: <NotFound />,
-          children: [
-            { path: "/", element: <Dashboard /> },
-            { path: "/clientes", element: <Clientes /> },
-            { path: "/vendas", element: <Vendas /> },
-            { path: "/estoque", element: <Estoque /> },
-            { path: "/fornecedores", element: <Fornecedores /> },
-            { path: "/tarefas", element: <Tarefas /> },
-            { path: "/notificacoes", element: <Notificacoes /> },
-            { path: "/aniversariantes", element: <Aniversariantes /> },
-            { path: "/relatorios", element: <Relatorios /> },
-            { path: "/configuracoes", element: <Configuracoes /> },
-            { path: "/novos-projetos", element: <NovosProjetos /> },
-          ],
-        },
-      ])}
-    />
+    <AuthProvider>
+      <RouterProvider
+        router={createBrowserRouter([
+          {
+            path: "/auth",
+            element: <Auth />,
+          },
+          {
+            path: "/",
+            element: (
+              <AuthGuard>
+                <AppLayout><Outlet /></AppLayout>
+              </AuthGuard>
+            ),
+            errorElement: <NotFound />,
+            children: [
+              { path: "/", element: <Dashboard /> },
+              { path: "/clientes", element: <Clientes /> },
+              { path: "/vendas", element: <Vendas /> },
+              { path: "/estoque", element: <Estoque /> },
+              { path: "/fornecedores", element: <Fornecedores /> },
+              { path: "/tarefas", element: <Tarefas /> },
+              { path: "/notificacoes", element: <Notificacoes /> },
+              { path: "/aniversariantes", element: <Aniversariantes /> },
+              { path: "/relatorios", element: <Relatorios /> },
+              { path: "/configuracoes", element: <Configuracoes /> },
+              { path: "/novos-projetos", element: <NovosProjetos /> },
+            ],
+          },
+        ])}
+      />
+    </AuthProvider>
   );
 }
 
