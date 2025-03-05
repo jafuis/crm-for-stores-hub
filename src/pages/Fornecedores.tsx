@@ -18,6 +18,7 @@ interface Fornecedor {
   address: string;
   products: string;
   owner_id?: string;
+  created_at?: string;
 }
 
 export default function Fornecedores() {
@@ -51,7 +52,14 @@ export default function Fornecedores() {
         .order('name');
       
       if (error) throw error;
-      setFornecedores(data || []);
+      
+      // Map the data to include the products field which isn't in the database
+      const fornecedoresData = data?.map(supplier => ({
+        ...supplier,
+        products: supplier.products || "" // Adding products property with default empty string
+      })) || [];
+      
+      setFornecedores(fornecedoresData);
     } catch (error) {
       console.error('Erro ao buscar fornecedores:', error);
       toast({
@@ -75,22 +83,24 @@ export default function Fornecedores() {
     }
 
     try {
+      // We need to separate products which isn't in the database schema
+      const { products, ...fornecedorData } = novoFornecedor;
+      
       const { data, error } = await supabase
         .from('suppliers')
-        .insert([{
-          name: novoFornecedor.name,
-          phone: novoFornecedor.phone,
-          email: novoFornecedor.email,
-          address: novoFornecedor.address,
-          products: novoFornecedor.products,
-          owner_id: user?.id
-        }])
+        .insert([fornecedorData])
         .select()
         .single();
 
       if (error) throw error;
 
-      setFornecedores([...fornecedores, data]);
+      // Reinclude the products field for the UI
+      const newFornecedor: Fornecedor = {
+        ...data,
+        products: products
+      };
+
+      setFornecedores([...fornecedores, newFornecedor]);
       setNovoFornecedor({
         name: "",
         phone: "",
@@ -141,15 +151,12 @@ export default function Fornecedores() {
     if (!fornecedorEditando) return;
 
     try {
+      // Separate products from the data to be sent to the database
+      const { products, created_at, ...fornecedorData } = fornecedorEditando;
+      
       const { error } = await supabase
         .from('suppliers')
-        .update({
-          name: fornecedorEditando.name,
-          phone: fornecedorEditando.phone,
-          email: fornecedorEditando.email,
-          address: fornecedorEditando.address,
-          products: fornecedorEditando.products
-        })
+        .update(fornecedorData)
         .eq('id', fornecedorEditando.id);
 
       if (error) throw error;
