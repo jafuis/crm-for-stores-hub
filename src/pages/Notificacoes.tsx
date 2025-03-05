@@ -4,18 +4,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Cake, Trash2, Bell, CheckSquare, AlertTriangle } from "lucide-react";
+import { CheckSquare, Bell } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface Cliente {
-  id: string;
-  nome: string;
-  telefone: string;
-  aniversario: string;
-}
 
 interface Tarefa {
   id: string;
@@ -25,71 +18,18 @@ interface Tarefa {
 }
 
 export default function Notificacoes() {
-  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
-  const [notificacoesAcknowledged, setNotificacoesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Carregar notificações reconhecidas do localStorage
-    const acknowledged = localStorage.getItem('notificacoesAcknowledged') || '[]';
-    setNotificacoesAcknowledged(JSON.parse(acknowledged));
-    
     if (user) {
-      fetchAniversariantes();
       fetchTarefasPendentes();
     } else {
       setLoading(false);
     }
   }, [user]);
-  
-  async function fetchAniversariantes() {
-    try {
-      const hoje = new Date();
-      const mesAtual = hoje.getMonth() + 1; // getMonth retorna 0-11
-      const diaAtual = hoje.getDate();
-      
-      // Buscar clientes do banco de dados
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*');
-
-      if (error) {
-        throw error;
-      }
-
-      // Filtrar aniversariantes de hoje
-      const aniversariantesHoje = data
-        .filter(cliente => {
-          if (!cliente.birthday) return false;
-          
-          try {
-            const aniversario = parseISO(cliente.birthday);
-            if (!isValid(aniversario)) return false;
-            
-            const mesAniversario = aniversario.getMonth() + 1;
-            const diaAniversario = aniversario.getDate();
-            
-            return diaAniversario === diaAtual && mesAniversario === mesAtual;
-          } catch (error) {
-            console.error("Erro ao verificar aniversário:", error);
-            return false;
-          }
-        })
-        .map(cliente => ({
-          id: cliente.id,
-          nome: cliente.name,
-          telefone: cliente.phone || '',
-          aniversario: cliente.birthday
-        }));
-      
-      setAniversariantes(aniversariantesHoje);
-    } catch (error) {
-      console.error("Erro ao buscar aniversariantes:", error);
-    }
-  }
   
   async function fetchTarefasPendentes() {
     try {
@@ -117,23 +57,6 @@ export default function Notificacoes() {
       setLoading(false);
     }
   }
-  
-  const handleRemoveAniversariante = (id: string) => {
-    const updatedAcknowledged = [...notificacoesAcknowledged, id];
-    setNotificacoesAcknowledged(updatedAcknowledged);
-    
-    // Only update the notifications acknowledged in localStorage - won't affect Aniversariantes page
-    localStorage.setItem('notificacoesAcknowledged', JSON.stringify(updatedAcknowledged));
-    
-    toast({
-      title: "Notificação removida",
-      description: "Notificação de aniversário removida com sucesso.",
-    });
-  };
-  
-  const aniversariantesFiltrados = aniversariantes.filter(
-    aniversariante => !notificacoesAcknowledged.includes(aniversariante.id)
-  );
 
   if (loading) {
     return (
@@ -149,48 +72,12 @@ export default function Notificacoes() {
         <div>
           <h1 className="text-2xl font-bold">Notificações</h1>
           <p className="text-muted-foreground">
-            Acompanhe tarefas pendentes e aniversários de clientes
+            Acompanhe tarefas pendentes
           </p>
         </div>
       </div>
       
       <div className="grid gap-6">
-        {aniversariantesFiltrados.length > 0 && (
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Cake className="w-5 h-5 text-pink-500" />
-              <h2 className="text-lg font-semibold">Aniversariantes de Hoje</h2>
-            </div>
-            <div className="space-y-4">
-              {aniversariantesFiltrados.map((cliente) => (
-                <div
-                  key={cliente.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
-                      <Cake className="w-5 h-5 text-pink-500" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{cliente.nome}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Aniversário hoje
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveAniversariante(cliente.id)}
-                  >
-                    <Trash2 className="w-4 h-4 text-gray-500" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-        
         {tarefasPendentes.length > 0 && (
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -222,12 +109,12 @@ export default function Notificacoes() {
           </Card>
         )}
         
-        {aniversariantesFiltrados.length === 0 && tarefasPendentes.length === 0 && (
+        {tarefasPendentes.length === 0 && (
           <Card className="p-6 flex flex-col items-center justify-center text-center">
             <Bell className="w-12 h-12 text-gray-300 mb-4" />
             <h2 className="text-xl font-semibold mb-2">Nenhuma notificação</h2>
             <p className="text-muted-foreground">
-              Você não tem tarefas pendentes ou aniversários para hoje
+              Você não tem tarefas pendentes
             </p>
           </Card>
         )}

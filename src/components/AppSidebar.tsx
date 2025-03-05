@@ -131,13 +131,8 @@ export function AppSidebar() {
     setOpenMobile(!openMobile);
   };
   
-  // Filtered birthdays that haven't been acknowledged in notifications page
-  const filteredNotificacoes = aniversariantes.filter(
-    aniversariante => !notificacoesAcknowledged.includes(aniversariante.id)
-  );
-
-  // Check if we have active notifications (unacknowledged birthdays or pending tasks)
-  const hasActiveNotifications = filteredNotificacoes.length > 0 || tarefasPendentes.length > 0;
+  // Check if we have active notifications (just pending tasks, no longer considering birthdays)
+  const hasActiveNotifications = tarefasPendentes.length > 0;
 
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white dark:bg-gray-800 h-full">
@@ -161,7 +156,7 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
-                    {/* Only show notification indicator on the notifications page if there are active notifications 
+                    {/* Only show notification indicator on the notifications page if there are pending tasks 
                        AND we're not currently on the notifications page */}
                     {(item.path === "/notificacoes" && hasActiveNotifications && location.pathname !== "/notificacoes") && (
                       <>
@@ -200,7 +195,7 @@ export function AppSidebar() {
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 left-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600 shadow-md"
+        className="fixed top-4 right-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600 shadow-md"
         onClick={toggleMobileMenu}
       >
         <Menu className="h-6 w-6" />

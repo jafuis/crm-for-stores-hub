@@ -3,155 +3,250 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Truck, Search, Edit, Trash2, Plus, Phone } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Truck, Search, MapPin, Phone, Mail, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { v4 as uuidv4 } from 'uuid';
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Fornecedor {
   id: string;
-  nome: string;
-  telefone: string;
+  name: string;
+  phone: string;
   email: string;
-  endereco: string;
-  produtos: string;
+  address: string;
+  products: string;
+  owner_id?: string;
 }
 
 export default function Fornecedores() {
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [busca, setBusca] = useState("");
-  const [fornecedorEditando, setFornecedorEditando] = useState<Fornecedor | null>(null);
-  const [novoFornecedor, setNovoFornecedor] = useState<Partial<Fornecedor>>({
-    nome: "",
-    telefone: "",
+  const [novoFornecedor, setNovoFornecedor] = useState({
+    name: "",
+    phone: "",
     email: "",
-    endereco: "",
-    produtos: "",
+    address: "",
+    products: ""
   });
+  const [fornecedorEditando, setFornecedorEditando] = useState<Fornecedor | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
 
-  // Carregar fornecedores do localStorage ao iniciar
   useEffect(() => {
-    const fornecedoresSalvos = localStorage.getItem('fornecedores');
-    if (fornecedoresSalvos) {
-      setFornecedores(JSON.parse(fornecedoresSalvos));
+    if (user) {
+      fetchFornecedores();
+    } else {
+      setLoading(false);
     }
-  }, []);
+  }, [user]);
 
-  // Salvar fornecedores no localStorage sempre que mudar
-  useEffect(() => {
-    localStorage.setItem('fornecedores', JSON.stringify(fornecedores));
-  }, [fornecedores]);
-
-  const handleAddNovoFornecedor = () => {
-    if (!novoFornecedor.nome || !novoFornecedor.produtos) {
+  const fetchFornecedores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setFornecedores(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar fornecedores:', error);
       toast({
-        title: "Campos obrigatórios",
-        description: "Nome e produtos são campos obrigatórios",
+        title: "Erro",
+        description: "Não foi possível carregar os fornecedores.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdicionarFornecedor = async () => {
+    if (!novoFornecedor.name) {
+      toast({
+        title: "Erro",
+        description: "O nome do fornecedor é obrigatório.",
         variant: "destructive"
       });
       return;
     }
 
-    const fornecedor: Fornecedor = {
-      id: Date.now().toString(),
-      nome: novoFornecedor.nome!,
-      telefone: novoFornecedor.telefone || "",
-      email: novoFornecedor.email || "",
-      endereco: novoFornecedor.endereco || "",
-      produtos: novoFornecedor.produtos!,
-    };
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .insert([{
+          name: novoFornecedor.name,
+          phone: novoFornecedor.phone,
+          email: novoFornecedor.email,
+          address: novoFornecedor.address,
+          products: novoFornecedor.products,
+          owner_id: user?.id
+        }])
+        .select()
+        .single();
 
-    setFornecedores([...fornecedores, fornecedor]);
-    setNovoFornecedor({
-      nome: "",
-      telefone: "",
-      email: "",
-      endereco: "",
-      produtos: "",
-    });
-    
-    toast({
-      title: "Fornecedor adicionado",
-      description: "O fornecedor foi adicionado com sucesso"
-    });
+      if (error) throw error;
+
+      setFornecedores([...fornecedores, data]);
+      setNovoFornecedor({
+        name: "",
+        phone: "",
+        email: "",
+        address: "",
+        products: ""
+      });
+      
+      toast({
+        title: "Sucesso",
+        description: "Fornecedor adicionado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao adicionar fornecedor:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível adicionar o fornecedor.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleExcluirFornecedor = (id: string) => {
-    setFornecedores(fornecedores.filter(f => f.id !== id));
-    toast({
-      title: "Fornecedor excluído",
-      description: "O fornecedor foi excluído com sucesso"
-    });
+  const handleExcluirFornecedor = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('suppliers')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setFornecedores(fornecedores.filter(f => f.id !== id));
+      toast({
+        title: "Sucesso",
+        description: "Fornecedor excluído com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir fornecedor:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o fornecedor.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleSalvarEdicao = () => {
+  const handleSalvarEdicao = async () => {
     if (!fornecedorEditando) return;
 
-    setFornecedores(fornecedores.map(f => 
-      f.id === fornecedorEditando.id ? fornecedorEditando : f
-    ));
-    setFornecedorEditando(null);
+    try {
+      const { error } = await supabase
+        .from('suppliers')
+        .update({
+          name: fornecedorEditando.name,
+          phone: fornecedorEditando.phone,
+          email: fornecedorEditando.email,
+          address: fornecedorEditando.address,
+          products: fornecedorEditando.products
+        })
+        .eq('id', fornecedorEditando.id);
+
+      if (error) throw error;
+
+      setFornecedores(fornecedores.map(f => 
+        f.id === fornecedorEditando.id ? fornecedorEditando : f
+      ));
+      setFornecedorEditando(null);
+      
+      toast({
+        title: "Sucesso",
+        description: "Fornecedor atualizado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar fornecedor:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o fornecedor.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatarTelefoneParaWhatsApp = (telefone: string) => {
+    // Remove qualquer caractere que não seja número
+    const numeroLimpo = telefone.replace(/\D/g, '');
     
-    toast({
-      title: "Fornecedor atualizado",
-      description: "As alterações foram salvas com sucesso"
-    });
+    // Garante que tenha o 55 (Brasil) no início se não tiver
+    let numeroFormatado = numeroLimpo;
+    if (!numeroLimpo.startsWith('55') && numeroLimpo.length > 8) {
+      numeroFormatado = `55${numeroLimpo}`;
+    }
+    
+    return `https://wa.me/${numeroFormatado}`;
   };
 
   const fornecedoresFiltrados = fornecedores.filter(fornecedor =>
-    fornecedor.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    fornecedor.produtos.toLowerCase().includes(busca.toLowerCase())
+    fornecedor.name.toLowerCase().includes(busca.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-96">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold">Fornecedores</h1>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto">
-              <Truck className="w-4 h-4 mr-2" />
-              Adicionar Fornecedor
-            </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>Novo Fornecedor</SheetTitle>
-            </SheetHeader>
-            <div className="space-y-4 mt-4">
-              <Input
-                placeholder="Nome"
-                value={novoFornecedor.nome}
-                onChange={e => setNovoFornecedor({ ...novoFornecedor, nome: e.target.value })}
-              />
-              <Input
-                placeholder="Telefone"
-                value={novoFornecedor.telefone}
-                onChange={e => setNovoFornecedor({ ...novoFornecedor, telefone: e.target.value })}
-              />
-              <Input
-                placeholder="Email"
-                type="email"
-                value={novoFornecedor.email}
-                onChange={e => setNovoFornecedor({ ...novoFornecedor, email: e.target.value })}
-              />
-              <Input
-                placeholder="Endereço"
-                value={novoFornecedor.endereco}
-                onChange={e => setNovoFornecedor({ ...novoFornecedor, endereco: e.target.value })}
-              />
-              <Input
-                placeholder="Produtos fornecidos"
-                value={novoFornecedor.produtos}
-                onChange={e => setNovoFornecedor({ ...novoFornecedor, produtos: e.target.value })}
-              />
-              <Button onClick={handleAddNovoFornecedor} className="w-full">
-                Adicionar Fornecedor
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <p className="text-muted-foreground">
+          Gerencie os fornecedores de sua loja
+        </p>
       </div>
+
+      <Card className="p-6">
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Novo Fornecedor</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              placeholder="Nome do fornecedor"
+              value={novoFornecedor.name}
+              onChange={(e) => setNovoFornecedor({ ...novoFornecedor, name: e.target.value })}
+            />
+            <Input
+              placeholder="Telefone"
+              value={novoFornecedor.phone}
+              onChange={(e) => setNovoFornecedor({ ...novoFornecedor, phone: e.target.value })}
+            />
+            <Input
+              placeholder="Email"
+              value={novoFornecedor.email}
+              onChange={(e) => setNovoFornecedor({ ...novoFornecedor, email: e.target.value })}
+            />
+            <Input
+              placeholder="Endereço"
+              value={novoFornecedor.address}
+              onChange={(e) => setNovoFornecedor({ ...novoFornecedor, address: e.target.value })}
+            />
+            <Input
+              placeholder="Produtos fornecidos"
+              value={novoFornecedor.products}
+              onChange={(e) => setNovoFornecedor({ ...novoFornecedor, products: e.target.value })}
+              className="md:col-span-2"
+            />
+          </div>
+          <Button 
+            className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto"
+            onClick={handleAdicionarFornecedor}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Fornecedor
+          </Button>
+        </div>
+      </Card>
 
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
@@ -163,129 +258,127 @@ export default function Fornecedores() {
         />
       </div>
 
-      <Card className="p-6">
-        {fornecedoresFiltrados.length > 0 ? (
-          <div className="space-y-4">
-            {fornecedoresFiltrados.map((fornecedor) => (
-              <div
-                key={fornecedor.id}
-                className="flex flex-col space-y-4 p-4 border rounded-lg"
-              >
-                <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
-                  <div>
-                    <h3 className="font-medium">{fornecedor.nome}</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {fornecedoresFiltrados.map((fornecedor) => (
+          <Card key={fornecedor.id} className="p-4">
+            <div className="flex flex-col space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-medium">{fornecedor.name}</h3>
+                  {fornecedor.phone && (
+                    <a 
+                      href={formatarTelefoneParaWhatsApp(fornecedor.phone)} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    >
+                      <Phone className="h-3 w-3" />
+                      {fornecedor.phone}
+                    </a>
+                  )}
+                  {fornecedor.email && (
                     <p className="text-sm text-muted-foreground">
-                      Produtos: {fornecedor.produtos}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Sheet>
-                      <SheetTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setFornecedorEditando(fornecedor)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </SheetTrigger>
-                      <SheetContent>
-                        <SheetHeader>
-                          <SheetTitle>Editar Fornecedor</SheetTitle>
-                        </SheetHeader>
-                        {fornecedorEditando && (
-                          <div className="space-y-4 mt-4">
-                            <Input
-                              placeholder="Nome"
-                              value={fornecedorEditando.nome}
-                              onChange={e => setFornecedorEditando({
-                                ...fornecedorEditando,
-                                nome: e.target.value
-                              })}
-                            />
-                            <Input
-                              placeholder="Telefone"
-                              value={fornecedorEditando.telefone}
-                              onChange={e => setFornecedorEditando({
-                                ...fornecedorEditando,
-                                telefone: e.target.value
-                              })}
-                            />
-                            <Input
-                              placeholder="Email"
-                              type="email"
-                              value={fornecedorEditando.email}
-                              onChange={e => setFornecedorEditando({
-                                ...fornecedorEditando,
-                                email: e.target.value
-                              })}
-                            />
-                            <Input
-                              placeholder="Endereço"
-                              value={fornecedorEditando.endereco}
-                              onChange={e => setFornecedorEditando({
-                                ...fornecedorEditando,
-                                endereco: e.target.value
-                              })}
-                            />
-                            <Input
-                              placeholder="Produtos fornecidos"
-                              value={fornecedorEditando.produtos}
-                              onChange={e => setFornecedorEditando({
-                                ...fornecedorEditando,
-                                produtos: e.target.value
-                              })}
-                            />
-                            <Button onClick={handleSalvarEdicao} className="w-full">
-                              Salvar Alterações
-                            </Button>
-                          </div>
-                        )}
-                      </SheetContent>
-                    </Sheet>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleExcluirFornecedor(fornecedor.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex flex-col md:grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    <a
-                      href={`tel:${fornecedor.telefone}`}
-                      className="hover:underline"
-                    >
-                      {fornecedor.telefone}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    <a
-                      href={`mailto:${fornecedor.email}`}
-                      className="hover:underline"
-                    >
                       {fornecedor.email}
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <span>{fornecedor.endereco}</span>
-                  </div>
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setFornecedorEditando(fornecedor)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent>
+                      <SheetHeader>
+                        <SheetTitle>Editar Fornecedor</SheetTitle>
+                      </SheetHeader>
+                      {fornecedorEditando && (
+                        <div className="space-y-4 mt-4">
+                          <Input
+                            placeholder="Nome do fornecedor"
+                            value={fornecedorEditando.name}
+                            onChange={(e) => setFornecedorEditando({
+                              ...fornecedorEditando,
+                              name: e.target.value
+                            })}
+                          />
+                          <Input
+                            placeholder="Telefone"
+                            value={fornecedorEditando.phone}
+                            onChange={(e) => setFornecedorEditando({
+                              ...fornecedorEditando,
+                              phone: e.target.value
+                            })}
+                          />
+                          <Input
+                            placeholder="Email"
+                            value={fornecedorEditando.email}
+                            onChange={(e) => setFornecedorEditando({
+                              ...fornecedorEditando,
+                              email: e.target.value
+                            })}
+                          />
+                          <Input
+                            placeholder="Endereço"
+                            value={fornecedorEditando.address}
+                            onChange={(e) => setFornecedorEditando({
+                              ...fornecedorEditando,
+                              address: e.target.value
+                            })}
+                          />
+                          <Input
+                            placeholder="Produtos fornecidos"
+                            value={fornecedorEditando.products}
+                            onChange={(e) => setFornecedorEditando({
+                              ...fornecedorEditando,
+                              products: e.target.value
+                            })}
+                          />
+                          <Button onClick={handleSalvarEdicao} className="w-full">
+                            Salvar Alterações
+                          </Button>
+                        </div>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleExcluirFornecedor(fornecedor.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center p-6 text-gray-500">
-            <Truck className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>Nenhum fornecedor encontrado</p>
-          </div>
-        )}
-      </Card>
+              {fornecedor.address && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Endereço:</span> {fornecedor.address}
+                </p>
+              )}
+              {fornecedor.products && (
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Produtos:</span> {fornecedor.products}
+                </p>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {fornecedoresFiltrados.length === 0 && (
+        <div className="text-center p-8">
+          <Truck className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium">Nenhum fornecedor encontrado</h3>
+          <p className="text-muted-foreground">
+            Adicione fornecedores ou tente outra busca
+          </p>
+        </div>
+      )}
     </div>
   );
 }

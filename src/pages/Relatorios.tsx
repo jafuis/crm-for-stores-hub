@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileDown, Users, DollarSign, Truck, CheckSquare, Package } from "lucide-react";
@@ -6,6 +7,7 @@ import jsPDF from "jspdf";
 import autoTable from 'jspdf-autotable';
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Venda {
   id: string;
@@ -34,10 +36,10 @@ interface Fornecedor {
 
 interface Produto {
   id: string;
-  nome: string;
-  quantidade: number;
-  preco: number;
-  fornecedor?: string;
+  name: string;
+  quantity: number;
+  unit_price: number;
+  supplier?: string;
 }
 
 interface Tarefa {
@@ -48,6 +50,29 @@ interface Tarefa {
 }
 
 export default function Relatorios() {
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchProdutos();
+  }, []);
+
+  const fetchProdutos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setProdutos(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar produtos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Função auxiliar para formatar datas no formato brasileiro
   const formatarData = (dataISO: string) => {
     try {
@@ -143,7 +168,6 @@ export default function Relatorios() {
   };
 
   const gerarRelatorioEstoque = () => {
-    const produtos: Produto[] = JSON.parse(localStorage.getItem('produtos') || '[]');
     const doc = new jsPDF();
     
     doc.setFont("helvetica", "bold");
@@ -151,10 +175,10 @@ export default function Relatorios() {
     doc.setFont("helvetica", "normal");
     
     const dados = produtos.map(produto => [
-      produto.nome,
-      produto.quantidade.toString(),
-      produto.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-      produto.fornecedor || 'N/A'
+      produto.name,
+      produto.quantity.toString(),
+      produto.unit_price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      produto.supplier || 'N/A'
     ]);
 
     let finalY = 25;
@@ -181,7 +205,7 @@ export default function Relatorios() {
     });
 
     const valorTotalEstoque = produtos.reduce((total, produto) => 
-      total + (produto.preco * produto.quantidade), 0
+      total + (produto.unit_price * produto.quantity), 0
     );
 
     doc.text(
