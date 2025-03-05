@@ -43,6 +43,11 @@ export default function Notificacoes() {
         schema: 'public',
         table: 'tasks'
       }, handleTaskChange)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'tasks'
+      }, handleTaskChange)
       .subscribe();
 
     return () => {
@@ -82,6 +87,36 @@ export default function Notificacoes() {
     }
   }
 
+  const toggleTarefaConcluida = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: 'completed'
+        })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Remove a tarefa da lista local
+      setTarefasPendentes(tarefasPendentes.filter(tarefa => tarefa.id !== id));
+
+      toast({
+        title: "Tarefa concluída",
+        description: "A tarefa foi marcada como concluída com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+      toast({
+        title: "Erro ao atualizar tarefa",
+        description: "Não foi possível atualizar o status da tarefa. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
@@ -99,6 +134,13 @@ export default function Notificacoes() {
             Acompanhe tarefas pendentes
           </p>
         </div>
+        {tarefasPendentes.length > 0 && (
+          <div className="relative">
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+            <Bell className="w-6 h-6 text-[#9b87f5]" />
+          </div>
+        )}
       </div>
       
       <div className="grid gap-6">
@@ -119,9 +161,18 @@ export default function Notificacoes() {
                       <CheckSquare className="w-5 h-5 text-blue-500" />
                       <p className="font-medium">{tarefa.titulo}</p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {tarefa.dataVencimento ? format(parseISO(tarefa.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "Sem data"}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-muted-foreground">
+                        {tarefa.dataVencimento ? format(parseISO(tarefa.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "Sem data"}
+                      </p>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => toggleTarefaConcluida(tarefa.id)}
+                      >
+                        Concluir
+                      </Button>
+                    </div>
                   </div>
                   <Progress 
                     value={0} 
