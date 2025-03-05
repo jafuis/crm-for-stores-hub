@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,10 +52,9 @@ export default function Fornecedores() {
       
       if (error) throw error;
       
-      // Map the data to include the products field which isn't in the database
       const fornecedoresData = data?.map(supplier => ({
         ...supplier,
-        products: supplier.products || "" // Adding products property with default empty string
+        products: ""
       })) || [];
       
       setFornecedores(fornecedoresData);
@@ -83,7 +81,6 @@ export default function Fornecedores() {
     }
 
     try {
-      // We need to separate products which isn't in the database schema
       const { products, ...fornecedorData } = novoFornecedor;
       
       const { data, error } = await supabase
@@ -94,7 +91,6 @@ export default function Fornecedores() {
 
       if (error) throw error;
 
-      // Reinclude the products field for the UI
       const newFornecedor: Fornecedor = {
         ...data,
         products: products
@@ -151,7 +147,6 @@ export default function Fornecedores() {
     if (!fornecedorEditando) return;
 
     try {
-      // Separate products from the data to be sent to the database
       const { products, created_at, ...fornecedorData } = fornecedorEditando;
       
       const { error } = await supabase
@@ -181,15 +176,11 @@ export default function Fornecedores() {
   };
 
   const formatarTelefoneParaWhatsApp = (telefone: string) => {
-    // Remove qualquer caractere que não seja número
     const numeroLimpo = telefone.replace(/\D/g, '');
-    
-    // Garante que tenha o 55 (Brasil) no início se não tiver
     let numeroFormatado = numeroLimpo;
     if (!numeroLimpo.startsWith('55') && numeroLimpo.length > 8) {
       numeroFormatado = `55${numeroLimpo}`;
     }
-    
     return `https://wa.me/${numeroFormatado}`;
   };
 
