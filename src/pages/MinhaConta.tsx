@@ -7,10 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { LogOut } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function MinhaConta() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -54,6 +57,23 @@ export default function MinhaConta() {
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logout realizado",
+        description: "Você saiu com sucesso",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Erro ao sair",
+        description: "Ocorreu um erro ao tentar sair",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-6">Minha Conta</h1>
@@ -78,6 +98,14 @@ export default function MinhaConta() {
                 <Label>Data de Criação</Label>
                 <Input value={new Date(user?.created_at || "").toLocaleString()} readOnly disabled />
               </div>
+              <Button 
+                variant="destructive" 
+                className="w-full mt-4 flex items-center justify-center gap-2"
+                onClick={handleSignOut}
+              >
+                <LogOut className="w-4 h-4" />
+                Sair
+              </Button>
             </div>
           </CardContent>
         </Card>

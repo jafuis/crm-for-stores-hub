@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Moon, Sun } from "lucide-react";
 
 export default function Configuracoes() {
   const { toast } = useToast();
@@ -20,6 +20,21 @@ export default function Configuracoes() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check if dark mode is active in localStorage or in system preferences
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   const handleDeleteAccount = async () => {
     setIsValidating(true);
@@ -76,6 +91,16 @@ export default function Configuracoes() {
   };
 
   const handleThemeToggle = (value: boolean) => {
+    setIsDarkMode(value);
+    
+    if (value) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+    
     toast({
       title: value ? "Tema escuro ativado" : "Tema claro ativado",
       description: "A aparência do sistema foi alterada",
@@ -100,16 +125,19 @@ export default function Configuracoes() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="tema-escuro">Tema Escuro</Label>
-                <Switch id="tema-escuro" onCheckedChange={handleThemeToggle} />
-              </div>
-              <div className="flex items-center justify-between space-x-2">
-                <Label htmlFor="tamanho-fonte">Tamanho da Fonte</Label>
-                <select id="tamanho-fonte" className="border rounded p-2">
-                  <option value="small">Pequena</option>
-                  <option value="medium">Média</option>
-                  <option value="large">Grande</option>
-                </select>
+                <div className="flex items-center gap-2">
+                  {isDarkMode ? (
+                    <Moon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  ) : (
+                    <Sun className="h-4 w-4 text-yellow-500" />
+                  )}
+                  <Label htmlFor="tema-escuro">Tema Escuro</Label>
+                </div>
+                <Switch 
+                  id="tema-escuro" 
+                  checked={isDarkMode}
+                  onCheckedChange={handleThemeToggle} 
+                />
               </div>
             </CardContent>
           </Card>
@@ -124,7 +152,7 @@ export default function Configuracoes() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <h3 className="font-medium text-destructive">Zona de Perigo</h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   Atenção! As ações abaixo são irreversíveis.
                 </p>
               </div>

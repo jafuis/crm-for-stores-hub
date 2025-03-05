@@ -157,12 +157,13 @@ export function AppSidebar() {
                       setOpenMobile(false);
                     }
                   }}
-                  className={`text-base dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
+                  className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
                 >
                   <div className="relative">
-                    <item.icon className="w-5 h-5" />
-                    {/* Only show notification indicator on the notifications page if there are active notifications */}
-                    {(item.path === "/notificacoes" && hasActiveNotifications) && (
+                    <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                    {/* Only show notification indicator on the notifications page if there are active notifications 
+                       AND we're not currently on the notifications page */}
+                    {(item.path === "/notificacoes" && hasActiveNotifications && location.pathname !== "/notificacoes") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -199,7 +200,7 @@ export function AppSidebar() {
       <Button
         variant="outline"
         size="icon"
-        className="fixed top-4 right-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600 shadow-md"
+        className="fixed top-4 left-4 z-[100] md:hidden bg-white dark:bg-gray-700 text-black dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600 dark:border-gray-600 shadow-md"
         onClick={toggleMobileMenu}
       >
         <Menu className="h-6 w-6" />
