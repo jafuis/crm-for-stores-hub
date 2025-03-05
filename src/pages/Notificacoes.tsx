@@ -29,8 +29,32 @@ export default function Notificacoes() {
     } else {
       setLoading(false);
     }
+
+    // Setup real-time subscription for task updates
+    const channel = supabase
+      .channel('public:tasks')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'tasks'
+      }, handleTaskChange)
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'tasks'
+      }, handleTaskChange)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
   
+  const handleTaskChange = () => {
+    // Refresh tasks when there's a change
+    fetchTarefasPendentes();
+  };
+
   async function fetchTarefasPendentes() {
     try {
       const { data, error } = await supabase

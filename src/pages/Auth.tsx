@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,12 +7,15 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Mail, Key, Eye, EyeOff, UserPlus, LogIn, Loader2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResetMode, setIsResetMode] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -37,6 +39,8 @@ export default function Auth() {
       const { error } = await supabase.auth.signInWithPassword({
         email: loginData.email,
         password: loginData.password,
+      }, {
+        data: { session_duration: rememberMe ? 30 * 24 * 60 * 60 : undefined }
       });
 
       if (error) {
@@ -179,7 +183,6 @@ export default function Auth() {
     }
   };
 
-  // Display password reset form
   if (isResetMode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 py-12">
@@ -299,6 +302,15 @@ export default function Auth() {
                     )}
                   </button>
                 </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="remember-me" 
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                />
+                <Label htmlFor="remember-me" className="text-sm">Permanecer conectado</Label>
               </div>
 
               <Button
