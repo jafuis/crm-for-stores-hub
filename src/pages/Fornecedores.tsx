@@ -329,23 +329,23 @@ export default function Fornecedores() {
                 <h3 className="text-xl font-semibold mb-3">{fornecedor.name}</h3>
                 <div className="space-y-2 mt-4">
                   {fornecedor.email && (
-                    <p className="text-sm">
-                      Email: <a href={formatarEmailParaMailto(fornecedor.email)} className="text-blue-500 hover:underline">{fornecedor.email}</a>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Email: <a href={formatarEmailParaMailto(fornecedor.email)} className="hover:text-blue-500 hover:underline transition-colors">{fornecedor.email}</a>
                     </p>
                   )}
                   {fornecedor.phone && (
-                    <p className="text-sm flex items-center gap-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
                       <Phone className="w-4 h-4 inline-block" /> 
-                      <a href={formatarTelefoneParaWhatsApp(fornecedor.phone)} target="_blank" rel="noreferrer" className="text-green-500 hover:underline">
+                      <a href={formatarTelefoneParaWhatsApp(fornecedor.phone)} target="_blank" rel="noreferrer" className="hover:text-green-500 hover:underline transition-colors">
                         {fornecedor.phone}
                       </a>
                     </p>
                   )}
                   {fornecedor.address && (
-                    <p className="text-sm">Endereço: {fornecedor.address}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Endereço: {fornecedor.address}</p>
                   )}
                   {fornecedor.products && (
-                    <p className="text-sm">Produtos: {fornecedor.products}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Produtos: {fornecedor.products}</p>
                   )}
                 </div>
               </Card>

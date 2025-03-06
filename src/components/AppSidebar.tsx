@@ -216,7 +216,9 @@ export function AppSidebar() {
                       </>
                     )}
                   </div>
-                  <span>{item.title}</span>
+                  <span className={`${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-pink-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
+                    {item.title}
+                  </span>
                   
                   {/* Counter badges */}
                   {item.title === "Aniversariantes" && hasActiveBirthdays && (
