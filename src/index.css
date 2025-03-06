@@ -51,7 +51,9 @@
 
     --sidebar-ring: 217.2 91.2% 59.8%;
     
-    --date-icon-color: #ea384c;
+    --date-icon-color: #ff4d4d;
+    --birthday-notification-color: #f472b6;
+    --task-notification-color: #3b82f6;
   }
 
   .dark {
@@ -92,6 +94,8 @@
     --sidebar-ring: 217.2 91.2% 59.8%;
     
     --date-icon-color: #FFDEE2;
+    --birthday-notification-color: #f472b6;
+    --task-notification-color: #60a5fa;
   }
 }
 
@@ -121,4 +125,26 @@
 /* Custom styling for date picker icon */
 .date-icon {
   color: var(--date-icon-color);
+}
+
+/* Animations for notifications */
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+  }
+  
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(255, 82, 82, 0);
+  }
+  
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 82, 82, 0);
+  }
+}
+
+.notification-pulse {
+  animation: pulse 2s infinite;
 }

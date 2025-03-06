@@ -168,6 +168,8 @@ export function AppSidebar() {
   
   // Check if we have active birthdays
   const hasActiveBirthdays = aniversariantes.length > 0;
+  // Check if we have pending tasks
+  const hasPendingTasks = tarefasPendentes.length > 0;
 
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white dark:bg-gray-800 h-full">
@@ -192,20 +194,42 @@ export function AppSidebar() {
                   <div className="relative">
                     {item.title === "Aniversariantes" ? (
                       <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-pink-500' : ''}`} />
+                    ) : item.title === "Tarefas" ? (
+                      <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
                     ) : (
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
                     
-                    {/* Show notification indicator on the birthdays page if there are birthdays today 
-                       AND we're not currently on the birthdays page */}
+                    {/* Notification indicator for birthdays */}
                     {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
                       </>
                     )}
+
+                    {/* Notification indicator for pending tasks */}
+                    {(item.path === "/tarefas" && hasPendingTasks && location.pathname !== "/tarefas") && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                      </>
+                    )}
                   </div>
                   <span>{item.title}</span>
+                  
+                  {/* Counter badges */}
+                  {item.title === "Aniversariantes" && hasActiveBirthdays && (
+                    <div className="ml-auto bg-pink-100 text-pink-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-pink-900 dark:text-pink-300">
+                      {aniversariantes.length}
+                    </div>
+                  )}
+                  
+                  {item.title === "Tarefas" && hasPendingTasks && (
+                    <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                      {tarefasPendentes.length}
+                    </div>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
