@@ -8,6 +8,9 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  isDarkMode: boolean;
+  setIsDarkMode: (value: boolean) => void;
+  setUser: (user: User | null) => void; // Add the setUser property to the interface
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -15,12 +18,31 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   loading: true,
   signOut: async () => {},
+  isDarkMode: false,
+  setIsDarkMode: () => {},
+  setUser: () => {}, // Add the default value for setUser
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check if dark mode is active in localStorage or in system preferences
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const shouldUseDarkMode = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    setIsDarkMode(shouldUseDarkMode);
+    
+    if (shouldUseDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   useEffect(() => {
     // Verifica a sessão atual no carregamento da página
@@ -49,8 +71,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   };
 
+  const handleSetIsDarkMode = (value: boolean) => {
+    setIsDarkMode(value);
+    
+    if (value) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      signOut, 
+      isDarkMode, 
+      setIsDarkMode: handleSetIsDarkMode,
+      setUser // Expose the setUser function to consumers of this context
+    }}>
       {children}
     </AuthContext.Provider>
   );

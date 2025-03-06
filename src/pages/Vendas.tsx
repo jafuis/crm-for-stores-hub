@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,8 +24,9 @@ interface Venda {
   id: string;
   valor: number;
   data: string;
+  produto?: string;
   arquivada?: boolean;
-  dia?: string; // para agrupar por dia
+  dia?: string;
 }
 
 export default function Vendas() {
@@ -36,7 +36,6 @@ export default function Vendas() {
   const [diasAbertos, setDiasAbertos] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
-  // Obter a data e hora atuais no formato ISO com ajuste para o fuso horário local
   const obterDataHoraAtual = () => {
     const agora = new Date();
     return format(agora, "yyyy-MM-dd'T'HH:mm");
@@ -44,6 +43,7 @@ export default function Vendas() {
 
   const [novaVenda, setNovaVenda] = useState({
     valor: "",
+    produto: "",
     data: obterDataHoraAtual(),
   });
 
@@ -52,12 +52,10 @@ export default function Vendas() {
     if (storedVendas) {
       const todasVendas = JSON.parse(storedVendas);
       
-      // Verificar se mudou o dia desde a última verificação
       const ultimoDia = localStorage.getItem('ultimoDiaVendas');
       const diaAtual = format(new Date(), 'yyyy-MM-dd');
       
       if (ultimoDia !== diaAtual) {
-        // Arquivar vendas do dia anterior
         const vendasAtualizadas = todasVendas.map((venda: Venda) => {
           const dataVenda = parseISO(venda.data);
           if (isValid(dataVenda)) {
@@ -73,7 +71,6 @@ export default function Vendas() {
         localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
         localStorage.setItem('ultimoDiaVendas', diaAtual);
       } else {
-        // Adicionar propriedade 'dia' para agrupar por dia nas vendas arquivadas
         const vendasComDia = todasVendas.map((venda: Venda) => {
           try {
             const dataVenda = parseISO(venda.data);
@@ -93,14 +90,13 @@ export default function Vendas() {
       }
     }
     
-    // Verificar mudança de dia a cada minuto
     const intervalId = setInterval(() => {
       const ultimoDia = localStorage.getItem('ultimoDiaVendas');
       const diaAtual = format(new Date(), 'yyyy-MM-dd');
       
       if (ultimoDia !== diaAtual) {
         localStorage.setItem('ultimoDiaVendas', diaAtual);
-        window.location.reload(); // Recarregar para atualizar lista de vendas
+        window.location.reload();
       }
     }, 60000);
 
@@ -120,6 +116,7 @@ export default function Vendas() {
     const venda: Venda = {
       id: (vendas.length + 1).toString(),
       valor: parseFloat(novaVenda.valor),
+      produto: novaVenda.produto,
       data: novaVenda.data,
       arquivada: false,
       dia: format(parseISO(novaVenda.data), 'yyyy-MM-dd')
@@ -136,6 +133,7 @@ export default function Vendas() {
 
     setNovaVenda({
       valor: "",
+      produto: "",
       data: obterDataHoraAtual(),
     });
   };
@@ -194,7 +192,6 @@ export default function Vendas() {
   };
 
   const formatarData = (data: string) => {
-    // Usando a formatação com localização brasileira
     return format(parseISO(data), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
       locale: ptBR,
     });
@@ -207,10 +204,8 @@ export default function Vendas() {
     }));
   };
 
-  // Filtrar vendas por status (arquivadas/não arquivadas)
   const vendasFiltradas = vendas.filter(venda => venda.arquivada === mostrarArquivadas);
 
-  // Agrupar vendas arquivadas por dia
   const agruparVendasPorDia = () => {
     if (!mostrarArquivadas) return {};
     
@@ -226,9 +221,18 @@ export default function Vendas() {
 
   const vendasAgrupadasPorDia = agruparVendasPorDia();
   const diasOrdenados = Object.keys(vendasAgrupadasPorDia).sort((a, b) => {
-    // Ordenar os dias em ordem decrescente (mais recente primeiro)
     return b.localeCompare(a);
   });
+
+  const renderVendaInfo = (venda: Venda) => (
+    <div>
+      <p className="font-medium">{formatarValor(venda.valor)}</p>
+      {venda.produto && <p className="text-sm text-blue-500">{venda.produto}</p>}
+      <p className="text-sm text-muted-foreground">
+        {formatarData(venda.data)}
+      </p>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -254,7 +258,16 @@ export default function Vendas() {
             />
           </div>
           <div className="relative">
-            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Produto (opcional)"
+              type="text"
+              className="pl-3"
+              value={novaVenda.produto}
+              onChange={(e) => setNovaVenda({ ...novaVenda, produto: e.target.value })}
+            />
+          </div>
+          <div className="relative">
+            <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500 dark:text-white" />
             <Input
               type="datetime-local"
               className="pl-10"
@@ -297,7 +310,6 @@ export default function Vendas() {
           {mostrarArquivadas ? "Vendas Arquivadas" : "Vendas Recentes"}
         </h2>
         
-        {/* Vendas não arquivadas (Recentes) */}
         {!mostrarArquivadas && (
           <div className="space-y-4">
             {vendasFiltradas.map((venda) => (
@@ -309,12 +321,7 @@ export default function Vendas() {
                   <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
                     <DollarSign className="w-5 h-5 text-green-600" />
                   </div>
-                  <div>
-                    <p className="font-medium">{formatarValor(venda.valor)}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatarData(venda.data)}
-                    </p>
-                  </div>
+                  {renderVendaInfo(venda)}
                 </div>
                 <div className="flex gap-2">
                   <Button 
@@ -350,7 +357,6 @@ export default function Vendas() {
           </div>
         )}
         
-        {/* Vendas arquivadas (agrupadas por dia) */}
         {mostrarArquivadas && (
           <div className="space-y-4">
             {diasOrdenados.map((dia) => (
@@ -428,7 +434,6 @@ export default function Vendas() {
         )}
       </Card>
       
-      {/* Dialog para editar venda */}
       <Dialog open={!!vendaSendoEditada} onOpenChange={(open) => !open && setVendaSendoEditada(null)}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -447,6 +452,18 @@ export default function Vendas() {
                   onChange={(e) => setVendaSendoEditada({
                     ...vendaSendoEditada,
                     valor: parseFloat(e.target.value) || 0
+                  })}
+                />
+              </div>
+              <div className="grid gap-2">
+                <label htmlFor="produto" className="text-sm font-medium">Produto (opcional)</label>
+                <Input
+                  id="produto"
+                  type="text"
+                  value={vendaSendoEditada.produto || ''}
+                  onChange={(e) => setVendaSendoEditada({
+                    ...vendaSendoEditada,
+                    produto: e.target.value
                   })}
                 />
               </div>
