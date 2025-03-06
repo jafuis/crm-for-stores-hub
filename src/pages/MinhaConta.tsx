@@ -59,18 +59,25 @@ export default function MinhaConta() {
 
   const handleSignOut = async () => {
     try {
-      await signOut();
+      setLoading(true);
+      await supabase.auth.signOut();
+      
+      // Force navigation to the auth page
       toast({
         title: "Logout realizado",
         description: "Você saiu com sucesso",
       });
-      navigate("/");
+      
+      // Use window.location for a complete page refresh and ensure session state is cleared
+      window.location.href = "/auth";
     } catch (error) {
       toast({
         title: "Erro ao sair",
         description: "Ocorreu um erro ao tentar sair",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,9 +109,10 @@ export default function MinhaConta() {
                 variant="destructive" 
                 className="w-full mt-4 flex items-center justify-center gap-2"
                 onClick={handleSignOut}
+                disabled={loading}
               >
                 <LogOut className="w-4 h-4" />
-                Sair
+                {loading ? "Saindo..." : "Sair"}
               </Button>
             </div>
           </CardContent>
