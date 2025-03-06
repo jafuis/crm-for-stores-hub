@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -34,7 +35,13 @@ import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+
+interface Cliente {
+  id: string;
+  nome: string;
+  telefone: string;
+  aniversario: string;
+}
 
 interface Tarefa {
   id: string;
@@ -51,7 +58,7 @@ const menuItems = [
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Notificações", icon: Bell, path: "/notificacoes" },
-  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
+  { title: "Aniversariantes", icon: Gift, path: "/aniversariantes", extraIcon: PartyPopper },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
@@ -63,67 +70,68 @@ export function AppSidebar() {
   const location = useLocation();
   const { openMobile, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
+  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [notificacoesAcknowledged, setNotificacoesAcknowledged] = useState<string[]>([]);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchTarefasPendentes();
-
-    // Setup real-time subscription for task updates
-    const channel = supabase
-      .channel('public:tasks')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchTarefasPendentes = async () => {
+  const isAniversarioHoje = (dataAniversario: string): boolean => {
+    if (!dataAniversario) return false;
+    
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('status', 'pending');
-
-      if (error) {
-        throw error;
+      const aniversario = parseISO(dataAniversario);
+      
+      if (!isValid(aniversario)) {
+        return false;
       }
-
-      // Transformar os dados do banco para o formato que usamos na interface
-      const tarefasFormatadas = data.map(task => ({
-        id: task.id,
-        titulo: task.title,
-        concluida: false,
-        dataVencimento: task.due_date || new Date().toISOString().split('T')[0]
-      }));
-
-      setTarefasPendentes(tarefasFormatadas);
+      
+      const hoje = new Date();
+      return aniversario.getMonth() === hoje.getMonth() && 
+             aniversario.getDate() === hoje.getDate();
     } catch (error) {
-      console.error("Erro ao buscar tarefas pendentes:", error);
+      console.error("Erro ao verificar aniversário:", error);
+      return false;
     }
   };
+
+  const checkForBirthdaysAndTasks = () => {
+    const clientesSalvos = localStorage.getItem('clientes');
+    const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+    
+    const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
+      isAniversarioHoje(cliente.aniversario)
+    );
+    
+    setAniversariantes(aniversariantesHoje);
+
+    const tarefasSalvas = localStorage.getItem('tarefas');
+    const tarefas = tarefasSalvas ? JSON.parse(tarefasSalvas) : [];
+    const pendentes = tarefas.filter((tarefa: Tarefa) => !tarefa.concluida);
+    setTarefasPendentes(pendentes);
+    
+    // Get notifications acknowledged (only for notifications page)
+    const acknowledged = localStorage.getItem('notificacoesAcknowledged') || '[]';
+    setNotificacoesAcknowledged(JSON.parse(acknowledged));
+  };
+
+  useEffect(() => {
+    checkForBirthdaysAndTasks();
+
+    const interval = setInterval(checkForBirthdaysAndTasks, 1000);
+
+    window.addEventListener('storage', checkForBirthdaysAndTasks);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', checkForBirthdaysAndTasks);
+    };
+  }, []);
 
   const toggleMobileMenu = () => {
     setOpenMobile(!openMobile);
   };
   
-  // Check if we have active notifications (just pending tasks)
+  // Check if we have active notifications (just pending tasks, no longer considering birthdays)
   const hasActiveNotifications = tarefasPendentes.length > 0;
 
   const renderSidebarContent = () => (
@@ -156,8 +164,23 @@ export function AppSidebar() {
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
                       </>
                     )}
+                    {/* Always show notification indicator for aniversariantes if there are any birthdays */}
+                    {(item.path === "/aniversariantes" && aniversariantes.length > 0) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                      </>
+                    )}
                   </div>
                   <span>{item.title}</span>
+                  {item.path === "/aniversariantes" && aniversariantes.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <PartyPopper className="w-4 h-4 text-pink-500 animate-bounce" />
+                      <span className="text-xs bg-pink-100 text-pink-600 dark:bg-pink-900 dark:text-pink-300 px-2 py-0.5 rounded-full">
+                        {aniversariantes.length}
+                      </span>
+                    </div>
+                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}

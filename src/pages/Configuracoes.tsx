@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,17 +14,33 @@ import { Eye, EyeOff, Moon, Sun } from "lucide-react";
 
 export default function Configuracoes() {
   const { toast } = useToast();
-  const { user, signOut, isDarkMode, setIsDarkMode } = useAuth();
+  const { user, signOut } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isValidating, setIsValidating] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Check if dark mode is active in localStorage or in system preferences
+    const savedTheme = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add('dark');
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
 
   const handleDeleteAccount = async () => {
     setIsValidating(true);
     
     try {
+      // First, verify the user's credentials
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -39,19 +56,23 @@ export default function Configuracoes() {
         return;
       }
       
+      // If validation successful, proceed with account deletion
       setIsValidating(false);
       setIsDeleting(true);
       
+      // Call the RPC function to delete user data
       const { error: rpcError } = await supabase.rpc('delete_user');
       
       if (rpcError) throw rpcError;
       
+      // Call Edge Function to delete auth user
       const { error: edgeFnError } = await supabase.functions.invoke('delete-user', {
         body: { userId: user?.id }
       });
       
       if (edgeFnError) throw edgeFnError;
       
+      // Sign out the user
       await signOut();
       
       toast({
@@ -71,6 +92,14 @@ export default function Configuracoes() {
 
   const handleThemeToggle = (value: boolean) => {
     setIsDarkMode(value);
+    
+    if (value) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
     
     toast({
       title: value ? "Tema escuro ativado" : "Tema claro ativado",
