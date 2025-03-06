@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp, Gift, MessageSquare, Home } from "lucide-react";
+import { Search, UserPlus, Star, Trash2, Mail, Phone, Calendar, Edit2, ChevronDown, ChevronUp, Gift, MessageSquare, Home, AtSign } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { isSameDay } from "date-fns";
@@ -244,7 +244,7 @@ export default function Clientes() {
             <AccordionContent>
               <div className="space-y-2 pt-2">
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Mail className="w-4 h-4" />
+                  <AtSign className="w-4 h-4" />
                   <a href={`mailto:${cliente.email}`} className="hover:text-blue-500 transition-colors">
                     {cliente.email}
                   </a>
@@ -261,7 +261,7 @@ export default function Clientes() {
                   </a>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-4 h-4 text-red-300" />
                   {cliente.aniversario}
                 </div>
                 <div className="flex items-center gap-2 mt-4">

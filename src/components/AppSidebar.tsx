@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -14,7 +13,8 @@ import {
   FileText,
   Lightbulb,
   User,
-  Calendar
+  Calendar,
+  Mail
 } from "lucide-react";
 import {
   Sidebar,
@@ -31,7 +31,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
-import { format, parseISO, isValid } from "date-fns";
+import { format, parseISO, isValid, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
@@ -105,6 +105,16 @@ export function AppSidebar() {
     };
   }, []);
 
+  // Create an interval to check for birthdays and tasks every minute
+  // This ensures the notifications stay up-to-date as the day changes
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchAniversariantes();
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, []);
+
   const fetchTarefasPendentes = async () => {
     try {
       const { data, error } = await supabase
@@ -141,24 +151,21 @@ export function AppSidebar() {
           if (!cliente.aniversario) return false;
           try {
             const aniversario = parseISO(cliente.aniversario);
-            return aniversario.getDate() === hoje.getDate() && 
-                  aniversario.getMonth() === hoje.getMonth();
+            return isSameDay(
+              new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+              new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+            );
           } catch (error) {
             return false;
           }
         });
         setAniversariantes(aniversariantesHoje);
+      } else {
+        setAniversariantes([]);
       }
-      
-      // You can also fetch from Supabase if you're storing clients there
-      // Example:
-      // const { data, error } = await supabase
-      //   .from('clients')
-      //   .select('*');
-      // ... filter for birthdays today
-      
     } catch (error) {
       console.error("Erro ao buscar aniversariantes:", error);
+      setAniversariantes([]);
     }
   };
 
@@ -200,7 +207,7 @@ export function AppSidebar() {
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
                     
-                    {/* Notification indicator for birthdays */}
+                    {/* Notification indicator for birthdays - Only show if there are birthdays */}
                     {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
