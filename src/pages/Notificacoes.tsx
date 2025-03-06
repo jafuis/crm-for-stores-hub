@@ -136,9 +136,9 @@ export default function Notificacoes() {
         </div>
         {tarefasPendentes.length > 0 && (
           <div className="relative">
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
-            <Bell className="w-6 h-6 text-blue-500" />
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping"></div>
+            <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
+            <Bell className="w-6 h-6 text-[#9b87f5]" />
           </div>
         )}
       </div>
