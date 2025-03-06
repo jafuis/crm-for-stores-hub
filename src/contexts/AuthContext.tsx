@@ -10,6 +10,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: (value: boolean) => void;
+  setUser: (user: User | null) => void; // Add the setUser property to the interface
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   isDarkMode: false,
   setIsDarkMode: () => {},
+  setUser: () => {}, // Add the default value for setUser
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -88,7 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading, 
       signOut, 
       isDarkMode, 
-      setIsDarkMode: handleSetIsDarkMode 
+      setIsDarkMode: handleSetIsDarkMode,
+      setUser // Expose the setUser function to consumers of this context
     }}>
       {children}
     </AuthContext.Provider>
