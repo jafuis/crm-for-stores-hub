@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar, ChevronDown, Bell, Gift } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, ChevronDown, Bell, Gift, CheckSquare } from "lucide-react";
 
 interface Venda {
   id: string;
@@ -70,10 +69,8 @@ export default function Dashboard() {
     if (vendasSalvas) {
       const todasVendas = JSON.parse(vendasSalvas);
       
-      // Verifica se mudou o mês desde a última verificação
       const mesAtual = format(new Date(), 'yyyy-MM');
       if (!ultimaVerificacao || ultimaVerificacao !== mesAtual) {
-        // Arquiva vendas do mês anterior
         const vendasAtualizadas = todasVendas.map((venda: Venda) => {
           const dataVenda = parseISO(venda.data);
           const mesVenda = format(dataVenda, 'yyyy-MM');
@@ -91,14 +88,12 @@ export default function Dashboard() {
         setVendas(todasVendas);
       }
       
-      // Verificar se mudou o dia - para resetar contadores diários
       const diaAtual = format(new Date(), 'yyyy-MM-dd');
       if (!ultimoDiaVerificado || ultimoDiaVerificado !== diaAtual) {
         localStorage.setItem('ultimoDiaVerificado', diaAtual);
         setLastCheckedDay(diaAtual);
       }
 
-      // Calcular vendas do dia anterior
       const ontem = subDays(new Date(), 1);
       const vendasDiaAnterior = todasVendas
         .filter((venda: Venda) => {
@@ -117,7 +112,6 @@ export default function Dashboard() {
       const clientes = JSON.parse(clientesSalvos);
       setClientes(clientes);
       
-      // Verificar aniversariantes
       const aniversariantesHoje = clientes.filter((cliente: Cliente) => 
         isAniversarioHoje(cliente.aniversario)
       );
@@ -134,20 +128,18 @@ export default function Dashboard() {
       setMetaDiaria(Number(metaSalva));
     }
     
-    // Verificar se é um novo dia a cada minuto
     const intervalId = setInterval(() => {
       const diaAtual = format(new Date(), 'yyyy-MM-dd');
       if (lastCheckedDay && lastCheckedDay !== diaAtual) {
         localStorage.setItem('ultimoDiaVerificado', diaAtual);
         setLastCheckedDay(diaAtual);
-        window.location.reload(); // Recarregar para atualizar dados diários
+        window.location.reload();
       }
     }, 60000);
 
     return () => clearInterval(intervalId);
   }, [lastCheckedDay]);
 
-  // Calcular vendas do dia (apenas não arquivadas)
   const vendasDoDia = vendas
     .filter(venda => {
       const dataVenda = parseISO(venda.data);
@@ -158,7 +150,6 @@ export default function Dashboard() {
     })
     .reduce((total, venda) => total + venda.valor, 0);
 
-  // Calcular vendas do mês (apenas não arquivadas)
   const vendasDoMes = vendas
     .filter(venda => {
       const dataVenda = parseISO(venda.data);
@@ -169,10 +160,8 @@ export default function Dashboard() {
     })
     .reduce((total, venda) => total + venda.valor, 0);
 
-  // Total de clientes
   const totalClientes = clientes.length;
 
-  // Calcular progresso da meta
   const progress = metaDiaria > 0 ? (vendasDoDia / metaDiaria) * 100 : 0;
 
   const handleDefinirMeta = (valor: number) => {
@@ -203,7 +192,6 @@ export default function Dashboard() {
               currency: 'BRL'
             })}
           </div>
-          {/* Adicionando total de vendas do dia anterior */}
           <div className="text-sm text-muted-foreground">
             Total de vendas do dia anterior: {vendasDiaAnterior.toLocaleString('pt-BR', {
               style: 'currency',
@@ -248,7 +236,7 @@ export default function Dashboard() {
 
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Calendar className="w-5 h-5 text-[#9b87f5]" />
+            <Calendar className="w-5 h-5 date-icon" />
             <h3 className="text-sm font-medium text-gray-500">Vendas do Mês</h3>
           </div>
           <p className="text-2xl font-bold mt-2">
@@ -260,23 +248,24 @@ export default function Dashboard() {
           <p className="text-sm text-gray-500 mt-1">{currentMonth}</p>
         </Card>
 
-        {/* Nova card para notificações */}
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-5 h-5 text-[#9b87f5]" />
-            <h3 className="text-sm font-medium text-gray-500">Notificações</h3>
+            <Gift className="w-5 h-5 text-pink-500" />
+            <h3 className="text-sm font-medium text-gray-500">Aniversariantes</h3>
           </div>
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm">Tarefas Pendentes</span>
-              <span className="text-xl font-semibold">{tarefasPendentes.length}</span>
-            </div>
-            <div className="flex items-center justify-between">
               <span className="text-sm flex items-center">
-                <Gift className="w-4 h-4 mr-1 text-pink-500" />
                 Aniversariantes Hoje
               </span>
               <span className="text-xl font-semibold">{aniversariantes.length}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm flex items-center">
+                <CheckSquare className="w-4 h-4 mr-1 text-[#9b87f5]" />
+                Tarefas Pendentes
+              </span>
+              <span className="text-xl font-semibold">{tarefasPendentes.length}</span>
             </div>
           </div>
         </Card>

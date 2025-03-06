@@ -50,6 +50,8 @@
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    --date-icon-color: #ea384c;
   }
 
   .dark {
@@ -88,6 +90,8 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    
+    --date-icon-color: #FFDEE2;
   }
 }
 
@@ -112,4 +116,9 @@
 
 .mobile-menu-tab:hover {
   width: 1.5rem;
+}
+
+/* Custom styling for date picker icon */
+.date-icon {
+  color: var(--date-icon-color);
 }

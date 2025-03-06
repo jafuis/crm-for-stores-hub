@@ -1,10 +1,10 @@
+
 import {
   Users,
   ShoppingCart,
   Package,
   Truck,
   CheckSquare,
-  Bell,
   Settings,
   Home,
   Menu,
@@ -13,7 +13,8 @@ import {
   PartyPopper,
   FileText,
   Lightbulb,
-  User
+  User,
+  Calendar
 } from "lucide-react";
 import {
   Sidebar,
@@ -43,6 +44,15 @@ interface Tarefa {
   dataVencimento: string;
 }
 
+interface Cliente {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  aniversario: string;
+  classificacao: number;
+}
+
 const menuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Clientes", icon: Users, path: "/clientes" },
@@ -50,7 +60,6 @@ const menuItems = [
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
-  { title: "Notificações", icon: Bell, path: "/notificacoes" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
@@ -64,10 +73,12 @@ export function AppSidebar() {
   const { openMobile, setOpenMobile } = useSidebar();
   const isMobile = useIsMobile();
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchTarefasPendentes();
+    fetchAniversariantes();
 
     // Setup real-time subscription for task updates
     const channel = supabase
@@ -106,12 +117,12 @@ export function AppSidebar() {
       }
 
       // Transformar os dados do banco para o formato que usamos na interface
-      const tarefasFormatadas = data.map(task => ({
+      const tarefasFormatadas = data?.map(task => ({
         id: task.id,
         titulo: task.title,
         concluida: false,
         dataVencimento: task.due_date || new Date().toISOString().split('T')[0]
-      }));
+      })) || [];
 
       setTarefasPendentes(tarefasFormatadas);
     } catch (error) {
@@ -119,12 +130,44 @@ export function AppSidebar() {
     }
   };
 
+  const fetchAniversariantes = async () => {
+    try {
+      // Check for local storage data first
+      const clientesSalvos = localStorage.getItem('clientes');
+      if (clientesSalvos) {
+        const clientes = JSON.parse(clientesSalvos);
+        const hoje = new Date();
+        const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+          if (!cliente.aniversario) return false;
+          try {
+            const aniversario = parseISO(cliente.aniversario);
+            return aniversario.getDate() === hoje.getDate() && 
+                  aniversario.getMonth() === hoje.getMonth();
+          } catch (error) {
+            return false;
+          }
+        });
+        setAniversariantes(aniversariantesHoje);
+      }
+      
+      // You can also fetch from Supabase if you're storing clients there
+      // Example:
+      // const { data, error } = await supabase
+      //   .from('clients')
+      //   .select('*');
+      // ... filter for birthdays today
+      
+    } catch (error) {
+      console.error("Erro ao buscar aniversariantes:", error);
+    }
+  };
+
   const toggleMobileMenu = () => {
     setOpenMobile(!openMobile);
   };
   
-  // Check if we have active notifications (just pending tasks)
-  const hasActiveNotifications = tarefasPendentes.length > 0;
+  // Check if we have active birthdays
+  const hasActiveBirthdays = aniversariantes.length > 0;
 
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white dark:bg-gray-800 h-full">
@@ -147,13 +190,18 @@ export function AppSidebar() {
                   className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
                 >
                   <div className="relative">
-                    <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
-                    {/* Only show notification indicator on the notifications page if there are pending tasks 
-                       AND we're not currently on the notifications page */}
-                    {(item.path === "/notificacoes" && hasActiveNotifications && location.pathname !== "/notificacoes") && (
+                    {item.title === "Aniversariantes" ? (
+                      <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-pink-500' : ''}`} />
+                    ) : (
+                      <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                    )}
+                    
+                    {/* Show notification indicator on the birthdays page if there are birthdays today 
+                       AND we're not currently on the birthdays page */}
+                    {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
                       <>
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
                       </>
                     )}
                   </div>
