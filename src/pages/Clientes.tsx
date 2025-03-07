@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -72,7 +71,7 @@ export default function Clientes() {
         nome: customer.name,
         email: customer.email || '',
         telefone: customer.phone || '',
-        endereco: customer.address !== undefined ? customer.address : '', // Safely handle the address field
+        endereco: customer.address || '', // Using || '' safely as we've verified the column exists in the DB
         aniversario: customer.birthday || '',
         classificacao: customer.classification || 1,
         owner_id: customer.owner_id
