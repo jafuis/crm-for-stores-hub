@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Trash2, FileEdit, Phone } from "lucide-react";
+import { Plus, Trash2, FileEdit, Phone, Mail, MapPin } from "lucide-react";
 
 interface Fornecedor {
   id: string;
@@ -50,13 +51,14 @@ export default function Fornecedores() {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('suppliers')
-        .select('*');
+        .select('*')
+        .eq('owner_id', user?.id);
       
       if (error) throw error;
       
       const fornecedoresData = data?.map(supplier => ({
         ...supplier,
-        products: ""
+        products: supplier.products || ""
       })) || [];
       
       setFornecedores(fornecedoresData);
@@ -83,26 +85,27 @@ export default function Fornecedores() {
     }
 
     try {
-      const { products, ...fornecedorData } = novoFornecedor;
+      const fornecedorData = {
+        ...novoFornecedor,
+        owner_id: user.id
+      };
       
       const { data, error } = await supabase
         .from('suppliers')
         .insert({
-          ...fornecedorData,
-          id: uuidv4(),
-          owner_id: user.id
+          name: fornecedorData.name,
+          email: fornecedorData.email,
+          phone: fornecedorData.phone,
+          address: fornecedorData.address,
+          products: fornecedorData.products,
+          owner_id: fornecedorData.owner_id
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      const newFornecedor: Fornecedor = {
-        ...data,
-        products: products
-      };
-
-      setFornecedores([...fornecedores, newFornecedor]);
+      setFornecedores([...fornecedores, data]);
       setNovoFornecedor({
         id: "",
         name: "",
@@ -133,15 +136,22 @@ export default function Fornecedores() {
   };
 
   const handleSalvarEdicao = async () => {
-    if (!fornecedorEditando) return;
+    if (!fornecedorEditando || !user) return;
 
     try {
-      const { products, created_at, ...fornecedorData } = fornecedorEditando;
+      const { created_at, owner_id, ...fornecedorData } = fornecedorEditando;
       
       const { error } = await supabase
         .from('suppliers')
-        .update(fornecedorData)
-        .eq('id', fornecedorEditando.id);
+        .update({
+          name: fornecedorData.name,
+          email: fornecedorData.email,
+          phone: fornecedorData.phone,
+          address: fornecedorData.address,
+          products: fornecedorData.products
+        })
+        .eq('id', fornecedorEditando.id)
+        .eq('owner_id', user.id);
 
       if (error) throw error;
 
@@ -170,7 +180,8 @@ export default function Fornecedores() {
       const { error } = await supabase
         .from('suppliers')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user?.id);
 
       if (error) throw error;
 
@@ -329,23 +340,39 @@ export default function Fornecedores() {
                 <h3 className="text-xl font-semibold mb-3">{fornecedor.name}</h3>
                 <div className="space-y-2 mt-4">
                   {fornecedor.email && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Email: <a href={formatarEmailParaMailto(fornecedor.email)} className="hover:text-blue-500 hover:underline transition-colors">{fornecedor.email}</a>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      <a 
+                        href={formatarEmailParaMailto(fornecedor.email)} 
+                        className="text-gray-600 hover:text-blue-500 transition-colors"
+                      >
+                        {fornecedor.email}
+                      </a>
                     </p>
                   )}
                   {fornecedor.phone && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                      <Phone className="w-4 h-4 inline-block" /> 
-                      <a href={formatarTelefoneParaWhatsApp(fornecedor.phone)} target="_blank" rel="noreferrer" className="hover:text-green-500 hover:underline transition-colors">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <Phone className="w-4 h-4" /> 
+                      <a 
+                        href={formatarTelefoneParaWhatsApp(fornecedor.phone)} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="text-gray-600 hover:text-green-500 transition-colors"
+                      >
                         {fornecedor.phone}
                       </a>
                     </p>
                   )}
                   {fornecedor.address && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Endereço: {fornecedor.address}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {fornecedor.address}
+                    </p>
                   )}
                   {fornecedor.products && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Produtos: {fornecedor.products}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                      <strong>Produtos:</strong> {fornecedor.products}
+                    </p>
                   )}
                 </div>
               </Card>

@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -81,7 +82,7 @@ export function AppSidebar() {
     fetchAniversariantes();
 
     // Setup real-time subscription for task updates
-    const channel = supabase
+    const taskChannel = supabase
       .channel('public:tasks')
       .on('postgres_changes', {
         event: 'INSERT',
@@ -100,8 +101,16 @@ export function AppSidebar() {
       }, fetchTarefasPendentes)
       .subscribe();
 
+    // Setup event listener for client changes in local storage
+    window.addEventListener('storage', handleStorageChange);
+
+    // Create a custom event system to capture client changes without page refresh
+    window.addEventListener('clientDataChanged', fetchAniversariantes);
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(taskChannel);
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('clientDataChanged', fetchAniversariantes);
     };
   }, []);
 
@@ -115,12 +124,19 @@ export function AppSidebar() {
     return () => clearInterval(intervalId);
   }, []);
 
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === 'clientes') {
+      fetchAniversariantes();
+    }
+  };
+
   const fetchTarefasPendentes = async () => {
     try {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .eq('owner_id', supabase.auth.getUser().then(({ data }) => data.user?.id));
 
       if (error) {
         throw error;
@@ -200,7 +216,7 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     {item.title === "Aniversariantes" ? (
-                      <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-pink-500' : ''}`} />
+                      <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
                     ) : item.title === "Tarefas" ? (
                       <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
                     ) : (
@@ -210,8 +226,8 @@ export function AppSidebar() {
                     {/* Notification indicator for birthdays - Only show if there are birthdays */}
                     {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
                       <>
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-ping" />
-                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
                       </>
                     )}
 
@@ -223,13 +239,13 @@ export function AppSidebar() {
                       </>
                     )}
                   </div>
-                  <span className={`${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-pink-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
+                  <span className={`${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
                     {item.title}
                   </span>
                   
                   {/* Counter badges */}
                   {item.title === "Aniversariantes" && hasActiveBirthdays && (
-                    <div className="ml-auto bg-pink-100 text-pink-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-pink-900 dark:text-pink-300">
+                    <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                       {aniversariantes.length}
                     </div>
                   )}

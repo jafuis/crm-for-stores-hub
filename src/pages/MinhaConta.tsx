@@ -64,7 +64,9 @@ export default function MinhaConta() {
         title: "Logout realizado",
         description: "Você saiu com sucesso",
       });
-      navigate("/");
+      
+      // Redirect to login page - using window.location for a complete page refresh
+      window.location.href = "/";
     } catch (error) {
       toast({
         title: "Erro ao sair",

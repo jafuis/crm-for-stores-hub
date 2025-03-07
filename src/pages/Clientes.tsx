@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Cliente {
   id: string;
@@ -39,6 +39,7 @@ export default function Clientes() {
     aniversario: "",
     classificacao: 1,
   });
+  const { user } = useAuth();
 
   useEffect(() => {
     const clientesSalvos = localStorage.getItem('clientes');
@@ -49,6 +50,11 @@ export default function Clientes() {
 
   useEffect(() => {
     localStorage.setItem('clientes', JSON.stringify(clientes));
+    
+    const clientDataChangedEvent = new Event('clientDataChanged');
+    window.dispatchEvent(clientDataChangedEvent);
+    
+    localStorage.setItem('clientsLastUpdated', new Date().toISOString());
   }, [clientes]);
 
   const handleAdicionarCliente = () => {
@@ -137,9 +143,7 @@ export default function Clientes() {
     );
   };
 
-  // Format phone number for WhatsApp link
   const formatWhatsAppNumber = (phone: string) => {
-    // Remove non-digit characters
     return phone.replace(/\D/g, '');
   };
 

@@ -43,11 +43,14 @@ export default function Tarefas() {
   }, [user]);
 
   async function fetchTarefas() {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
+        .eq('owner_id', user.id)
         .order('due_date', { ascending: true });
 
       if (error) {
@@ -124,13 +127,16 @@ export default function Tarefas() {
   };
 
   const toggleTarefaConcluida = async (id: string, concluida: boolean) => {
+    if (!user) return;
+    
     try {
       const { error } = await supabase
         .from('tasks')
         .update({
           status: concluida ? 'pending' : 'completed'
         })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
 
       if (error) {
         throw error;
@@ -159,11 +165,14 @@ export default function Tarefas() {
   };
 
   const handleExcluirTarefa = async (id: string) => {
+    if (!user) return;
+    
     try {
       const { error } = await supabase
         .from('tasks')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
 
       if (error) {
         throw error;
