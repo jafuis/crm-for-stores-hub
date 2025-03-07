@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,7 +30,7 @@ interface DatabaseSupplier {
   address: string | null;
   created_at: string;
   owner_id: string | null;
-  products?: string;
+  products?: string | null;
 }
 
 export default function Fornecedores() {
@@ -58,10 +59,12 @@ export default function Fornecedores() {
   const fetchFornecedores = async () => {
     try {
       setIsLoading(true);
+      if (!user) return;
+      
       const { data, error } = await supabase
         .from('suppliers')
         .select('*')
-        .eq('owner_id', user?.id);
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -101,20 +104,17 @@ export default function Fornecedores() {
 
     try {
       const fornecedorData = {
-        ...novoFornecedor,
+        name: novoFornecedor.name,
+        email: novoFornecedor.email,
+        phone: novoFornecedor.phone,
+        address: novoFornecedor.address,
+        products: novoFornecedor.products,
         owner_id: user.id
       };
       
       const { data, error } = await supabase
         .from('suppliers')
-        .insert({
-          name: fornecedorData.name,
-          email: fornecedorData.email,
-          phone: fornecedorData.phone,
-          address: fornecedorData.address,
-          products: fornecedorData.products,
-          owner_id: fornecedorData.owner_id
-        })
+        .insert(fornecedorData)
         .select()
         .single();
 
@@ -242,78 +242,17 @@ export default function Fornecedores() {
   return (
     <div className="space-y-6 animate-fadeIn">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Fornecedores</h1>
-        <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Fornecedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
-              <DialogDescription>
-                Preencha os dados do fornecedor abaixo.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="nome" className="text-sm font-medium">Nome*</label>
-                <Input
-                  id="nome"
-                  value={novoFornecedor.name}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, name: e.target.value})}
-                  placeholder="Nome do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email*</label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={novoFornecedor.email}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, email: e.target.value})}
-                  placeholder="Email do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="telefone" className="text-sm font-medium">Telefone</label>
-                <Input
-                  id="telefone"
-                  value={novoFornecedor.phone}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, phone: e.target.value})}
-                  placeholder="Telefone do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="endereco" className="text-sm font-medium">Endereço</label>
-                <Input
-                  id="endereco"
-                  value={novoFornecedor.address}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, address: e.target.value})}
-                  placeholder="Endereço do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="produtos" className="text-sm font-medium">Produtos</label>
-                <Textarea
-                  id="produtos"
-                  value={novoFornecedor.products}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, products: e.target.value})}
-                  placeholder="Produtos fornecidos"
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
-              <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]" onClick={handleAdicionarFornecedor}>
-                Adicionar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <div>
+          <h1 className="text-2xl font-bold">Fornecedores</h1>
+          <p className="text-muted-foreground">Gerencie seus fornecedores</p>
+        </div>
+        <Button 
+          className="bg-[#9b87f5] hover:bg-[#7e69ab]"
+          onClick={() => setDialogAberto(true)}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Fornecedor
+        </Button>
       </div>
 
       {isLoading ? (
@@ -406,6 +345,72 @@ export default function Fornecedores() {
           )}
         </div>
       )}
+
+      <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do fornecedor abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="nome" className="text-sm font-medium">Nome*</label>
+              <Input
+                id="nome"
+                value={novoFornecedor.name}
+                onChange={(e) => setNovoFornecedor({...novoFornecedor, name: e.target.value})}
+                placeholder="Nome do fornecedor"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium">Email*</label>
+              <Input
+                id="email"
+                type="email"
+                value={novoFornecedor.email}
+                onChange={(e) => setNovoFornecedor({...novoFornecedor, email: e.target.value})}
+                placeholder="Email do fornecedor"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="telefone" className="text-sm font-medium">Telefone</label>
+              <Input
+                id="telefone"
+                value={novoFornecedor.phone}
+                onChange={(e) => setNovoFornecedor({...novoFornecedor, phone: e.target.value})}
+                placeholder="Telefone do fornecedor"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="endereco" className="text-sm font-medium">Endereço</label>
+              <Input
+                id="endereco"
+                value={novoFornecedor.address}
+                onChange={(e) => setNovoFornecedor({...novoFornecedor, address: e.target.value})}
+                placeholder="Endereço do fornecedor"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="produtos" className="text-sm font-medium">Produtos</label>
+              <Textarea
+                id="produtos"
+                value={novoFornecedor.products}
+                onChange={(e) => setNovoFornecedor({...novoFornecedor, products: e.target.value})}
+                placeholder="Produtos fornecidos"
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
+            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]" onClick={handleAdicionarFornecedor}>
+              Adicionar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={editDialogAberto} onOpenChange={setEditDialogAberto}>
         <DialogContent>
