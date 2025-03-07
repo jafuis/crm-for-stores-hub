@@ -11,7 +11,6 @@ export type Database = {
     Tables: {
       customers: {
         Row: {
-          address: string | null
           birthday: string | null
           classification: number | null
           created_at: string
@@ -22,7 +21,6 @@ export type Database = {
           phone: string | null
         }
         Insert: {
-          address?: string | null
           birthday?: string | null
           classification?: number | null
           created_at?: string
@@ -33,7 +31,6 @@ export type Database = {
           phone?: string | null
         }
         Update: {
-          address?: string | null
           birthday?: string | null
           classification?: number | null
           created_at?: string
@@ -200,7 +197,6 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
-          products: string | null
         }
         Insert: {
           address?: string | null
@@ -210,7 +206,6 @@ export type Database = {
           name: string
           owner_id?: string | null
           phone?: string | null
-          products?: string | null
         }
         Update: {
           address?: string | null
@@ -220,7 +215,6 @@ export type Database = {
           name?: string
           owner_id?: string | null
           phone?: string | null
-          products?: string | null
         }
         Relationships: []
       }
