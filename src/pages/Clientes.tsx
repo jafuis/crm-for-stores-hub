@@ -27,7 +27,7 @@ interface Cliente {
   nome: string;
   telefone: string;
   email: string;
-  endereco: string; // Added address field
+  endereco: string; // Address field in our interface
   aniversario: string;
   classificacao: number;
   owner_id?: string;
@@ -72,7 +72,7 @@ export default function Clientes() {
         nome: customer.name,
         email: customer.email || '',
         telefone: customer.phone || '',
-        endereco: customer.address || '', // Map the address field
+        endereco: customer.address || '', // Handle the address field even if it doesn't exist yet
         aniversario: customer.birthday || '',
         classificacao: customer.classification || 1,
         owner_id: customer.owner_id
