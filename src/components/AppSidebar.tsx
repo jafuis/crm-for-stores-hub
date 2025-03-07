@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -37,6 +36,7 @@ import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Tarefa {
   id: string;
@@ -76,6 +76,7 @@ export function AppSidebar() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchTarefasPendentes();
@@ -132,11 +133,14 @@ export function AppSidebar() {
 
   const fetchTarefasPendentes = async () => {
     try {
+      // Fix: Use the user from the auth context instead of trying to get it from supabase
+      if (!user) return;
+      
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('status', 'pending')
-        .eq('owner_id', supabase.auth.getUser().then(({ data }) => data.user?.id));
+        .eq('owner_id', user.id); // Use the current user's ID directly
 
       if (error) {
         throw error;

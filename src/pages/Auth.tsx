@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -17,11 +16,11 @@ export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   
   // State for the signup form
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [signupName, setSignupName] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
   
@@ -60,6 +59,17 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate password confirmation
+    if (signupPassword !== confirmPassword) {
+      toast({
+        title: "Erro de validação",
+        description: "As senhas não coincidem. Por favor, tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSignupLoading(true);
     
     try {
@@ -104,11 +114,6 @@ export default function Auth() {
       });
       
       if (error) throw error;
-      
-      // Store auth session
-      if (rememberMe) {
-        localStorage.setItem("supabase.auth.token", JSON.stringify(data));
-      }
       
       // Set user in context
       setUser(data.user);
@@ -173,12 +178,7 @@ export default function Auth() {
               />
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">Senha</Label>
-                <Button variant="link" className="p-0 h-auto" onClick={() => setView("forgotPassword")}>
-                  Esqueceu a senha?
-                </Button>
-              </div>
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -187,19 +187,6 @@ export default function Auth() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="rememberMe" 
-                checked={rememberMe} 
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-              />
-              <label
-                htmlFor="rememberMe"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Permanecer conectado
-              </label>
             </div>
             <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={loading}>
               {loading ? (
@@ -211,6 +198,11 @@ export default function Auth() {
                 "Entrar"
               )}
             </Button>
+            <div className="text-center">
+              <Button variant="link" className="p-0 h-auto" onClick={() => setView("forgotPassword")}>
+                Esqueceu a senha?
+              </Button>
+            </div>
           </form>
         )}
 
@@ -246,6 +238,17 @@ export default function Auth() {
                 placeholder="******"
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirme a Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="******"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 required
               />
             </div>
@@ -290,14 +293,9 @@ export default function Auth() {
 
         <div className="flex flex-col space-y-2 text-center">
           {view === "login" && (
-            <>
-              <Button variant="link" className="p-0 h-auto" onClick={() => setView("forgotPassword")}>
-                Esqueceu a senha?
-              </Button>
-              <Button variant="link" className="p-0 h-auto" onClick={() => setView("signup")}>
-                Não tem uma conta? Crie uma
-              </Button>
-            </>
+            <Button variant="link" className="p-0 h-auto" onClick={() => setView("signup")}>
+              Não tem uma conta? Crie uma
+            </Button>
           )}
           {view === "signup" && (
             <Button variant="link" className="p-0 h-auto" onClick={() => setView("login")}>

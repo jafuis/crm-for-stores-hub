@@ -18,14 +18,18 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Cliente {
   id: string;
   nome: string;
   telefone: string;
   email: string;
+  endereco: string; // Address field in our interface
   aniversario: string;
   classificacao: number;
+  owner_id?: string;
 }
 
 export default function Clientes() {
@@ -36,57 +40,169 @@ export default function Clientes() {
     nome: "",
     telefone: "",
     email: "",
+    endereco: "", // Added address field
     aniversario: "",
     classificacao: 1,
   });
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    const clientesSalvos = localStorage.getItem('clientes');
-    if (clientesSalvos) {
-      setClientes(JSON.parse(clientesSalvos));
+    if (user) {
+      fetchClientes();
     }
-  }, []);
+  }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem('clientes', JSON.stringify(clientes));
+  const fetchClientes = async () => {
+    if (!user) return;
     
-    const clientDataChangedEvent = new Event('clientDataChanged');
-    window.dispatchEvent(clientDataChangedEvent);
-    
-    localStorage.setItem('clientsLastUpdated', new Date().toISOString());
-  }, [clientes]);
-
-  const handleAdicionarCliente = () => {
-    if (!novoCliente.nome || !novoCliente.telefone || !novoCliente.email) return;
-
-    const cliente: Cliente = {
-      id: editingClient ? editingClient.id : Date.now().toString(),
-      ...novoCliente
-    };
-
-    let novosClientes;
-    if (editingClient) {
-      novosClientes = clientes.map(c => c.id === editingClient.id ? cliente : c);
-    } else {
-      novosClientes = [...clientes, cliente];
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('owner_id', user.id);
+      
+      if (error) throw error;
+      
+      const clientesData = data.map(customer => ({
+        id: customer.id,
+        nome: customer.name,
+        email: customer.email || '',
+        telefone: customer.phone || '',
+        endereco: customer.address || '', // Using || '' safely as we've verified the column exists in the DB
+        aniversario: customer.birthday || '',
+        classificacao: customer.classification || 1,
+        owner_id: customer.owner_id
+      }));
+      
+      setClientes(clientesData);
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar os clientes.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-
-    novosClientes.sort((a, b) => a.nome.localeCompare(b.nome));
-    setClientes(novosClientes);
-    setNovoCliente({
-      nome: "",
-      telefone: "",
-      email: "",
-      aniversario: "",
-      classificacao: 1,
-    });
-    setEditingClient(null);
   };
 
-  const handleExcluirCliente = (id: string) => {
-    const novosClientes = clientes.filter(cliente => cliente.id !== id);
-    setClientes(novosClientes);
+  const handleAdicionarCliente = async () => {
+    if (!novoCliente.nome || !novoCliente.telefone || !novoCliente.email || !user) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha pelo menos nome, telefone e email.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const clienteData = {
+        name: novoCliente.nome,
+        phone: novoCliente.telefone,
+        email: novoCliente.email,
+        address: novoCliente.endereco, // Include address when adding a client
+        birthday: novoCliente.aniversario || null,
+        classification: novoCliente.classificacao,
+        owner_id: user.id
+      };
+
+      let response;
+
+      if (editingClient) {
+        // Update existing client
+        response = await supabase
+          .from('customers')
+          .update(clienteData)
+          .eq('id', editingClient.id)
+          .eq('owner_id', user.id)
+          .select()
+          .single();
+      } else {
+        // Insert new client
+        response = await supabase
+          .from('customers')
+          .insert(clienteData)
+          .select()
+          .single();
+      }
+
+      if (response.error) throw response.error;
+
+      const data = response.data;
+      const cliente: Cliente = {
+        id: data.id,
+        nome: data.name,
+        telefone: data.phone || '',
+        email: data.email || '',
+        endereco: data.address || '',
+        aniversario: data.birthday || '',
+        classificacao: data.classification || 1,
+        owner_id: data.owner_id
+      };
+
+      if (editingClient) {
+        setClientes(clientes.map(c => c.id === editingClient.id ? cliente : c));
+      } else {
+        setClientes([...clientes, cliente]);
+      }
+
+      setNovoCliente({
+        nome: "",
+        telefone: "",
+        email: "",
+        endereco: "",
+        aniversario: "",
+        classificacao: 1,
+      });
+      setEditingClient(null);
+
+      toast({
+        title: editingClient ? "Cliente atualizado" : "Cliente adicionado",
+        description: editingClient 
+          ? "O cliente foi atualizado com sucesso." 
+          : "O cliente foi adicionado com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível salvar o cliente.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleExcluirCliente = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id)
+        .eq('owner_id', user.id);
+
+      if (error) throw error;
+
+      setClientes(clientes.filter(cliente => cliente.id !== id));
+      
+      toast({
+        title: "Cliente excluído",
+        description: "O cliente foi excluído com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o cliente.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleEditarCliente = (cliente: Cliente) => {
@@ -95,19 +211,38 @@ export default function Clientes() {
       nome: cliente.nome,
       telefone: cliente.telefone,
       email: cliente.email,
+      endereco: cliente.endereco, // Include address when editing
       aniversario: cliente.aniversario,
       classificacao: cliente.classificacao,
     });
   };
 
-  const handleStarClick = (clienteId: string, novaClassificacao: number) => {
-    const novosClientes = clientes.map(cliente => {
-      if (cliente.id === clienteId) {
-        return { ...cliente, classificacao: novaClassificacao };
-      }
-      return cliente;
-    });
-    setClientes(novosClientes);
+  const handleStarClick = async (clienteId: string, novaClassificacao: number) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('customers')
+        .update({ classification: novaClassificacao })
+        .eq('id', clienteId)
+        .eq('owner_id', user.id);
+
+      if (error) throw error;
+
+      setClientes(clientes.map(cliente => {
+        if (cliente.id === clienteId) {
+          return { ...cliente, classificacao: novaClassificacao };
+        }
+        return cliente;
+      }));
+    } catch (error) {
+      console.error('Erro ao atualizar classificação:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar a classificação.",
+        variant: "destructive"
+      });
+    }
   };
 
   const clientesFiltrados = clientes
@@ -188,6 +323,13 @@ export default function Clientes() {
               </div>
               <div>
                 <Input
+                  placeholder="Endereço"
+                  value={novoCliente.endereco}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                />
+              </div>
+              <div>
+                <Input
                   type="date"
                   placeholder="Aniversário"
                   value={novoCliente.aniversario}
@@ -222,142 +364,163 @@ export default function Clientes() {
         />
       </div>
 
-      <Accordion type="single" collapsible className="w-full space-y-2">
-        {clientesFiltrados.map((cliente) => (
-          <AccordionItem 
-            key={cliente.id} 
-            value={cliente.id} 
-            className={`border rounded-lg p-2 ${isAniversariante(cliente) ? 'bg-pink-50 border-pink-200' : ''}`}
-          >
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center justify-between w-full pr-4">
-                <div className="flex items-center gap-4">
-                  <div className="font-semibold flex items-center gap-2">
-                    {cliente.nome}
-                    {isAniversariante(cliente) && (
-                      <Gift className="w-4 h-4 text-pink-500 animate-bounce" />
-                    )}
-                  </div>
-                  <StarRating 
-                    value={cliente.classificacao} 
-                    onChange={(rating) => handleStarClick(cliente.id, rating)}
-                  />
-                </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <AtSign className="w-4 h-4" />
-                  <a href={`mailto:${cliente.email}`} className="hover:text-blue-500 transition-colors">
-                    {cliente.email}
-                  </a>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <MessageSquare className="w-4 h-4 text-green-500" />
-                  <a 
-                    href={`https://wa.me/${formatWhatsAppNumber(cliente.telefone)}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="hover:text-green-500 transition-colors"
-                  >
-                    {cliente.telefone}
-                  </a>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="w-4 h-4 text-red-300" />
-                  {cliente.aniversario}
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditarCliente(cliente)}
-                      >
-                        <Edit2 className="w-4 h-4 mr-2" />
-                        Editar
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent className="bg-white">
-                      <SheetHeader>
-                        <SheetTitle>Editar Cliente</SheetTitle>
-                      </SheetHeader>
-                      <div className="space-y-4 mt-4">
-                        <Input
-                          placeholder="Nome"
-                          value={novoCliente.nome}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
-                        />
-                        <Input
-                          placeholder="Telefone"
-                          value={novoCliente.telefone}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
-                        />
-                        <Input
-                          placeholder="Email"
-                          type="email"
-                          value={novoCliente.email}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
-                        />
-                        <Input
-                          type="date"
-                          placeholder="Aniversário"
-                          value={novoCliente.aniversario}
-                          onChange={(e) => setNovoCliente({ ...novoCliente, aniversario: e.target.value })}
-                        />
-                        <div>
-                          <p className="mb-2 text-sm text-gray-600">Classificação</p>
-                          <StarRating
-                            value={novoCliente.classificacao}
-                            onChange={(rating) => setNovoCliente({ ...novoCliente, classificacao: rating })}
-                          />
-                        </div>
-                        <Button 
-                          className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
-                          onClick={handleAdicionarCliente}
-                        >
-                          Salvar Alterações
-                        </Button>
+      {isLoading ? (
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
+        </div>
+      ) : (
+        <Accordion type="single" collapsible className="w-full space-y-2">
+          {clientesFiltrados.length === 0 ? (
+            <Card className="p-6 text-center">
+              <p className="text-gray-500">Nenhum cliente encontrado</p>
+            </Card>
+          ) : (
+            clientesFiltrados.map((cliente) => (
+              <AccordionItem 
+                key={cliente.id} 
+                value={cliente.id} 
+                className={`border rounded-lg p-2 ${isAniversariante(cliente) ? 'bg-pink-50 border-pink-200' : ''}`}
+              >
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center justify-between w-full pr-4">
+                    <div className="flex items-center gap-4">
+                      <div className="font-semibold flex items-center gap-2">
+                        {cliente.nome}
+                        {isAniversariante(cliente) && (
+                          <Gift className="w-4 h-4 text-pink-500 animate-bounce" />
+                        )}
                       </div>
-                    </SheetContent>
-                  </Sheet>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="sm"
+                      <StarRating 
+                        value={cliente.classificacao} 
+                        onChange={(rating) => handleStarClick(cliente.id, rating)}
+                      />
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <AtSign className="w-4 h-4" />
+                      <a href={`mailto:${cliente.email}`} className="hover:text-blue-500 transition-colors">
+                        {cliente.email}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Home className="w-4 h-4" />
+                      <span>{cliente.endereco || 'Endereço não informado'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MessageSquare className="w-4 h-4 text-green-500" />
+                      <a 
+                        href={`https://wa.me/${formatWhatsAppNumber(cliente.telefone)}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-green-500 transition-colors"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Excluir
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-white">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Deseja excluir este cliente? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction 
-                          onClick={() => handleExcluirCliente(cliente.id)}
-                          className="bg-red-500 hover:bg-red-600"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+                        {cliente.telefone}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Calendar className="w-4 h-4 text-red-300" />
+                      {cliente.aniversario || 'Aniversário não informado'}
+                    </div>
+                    <div className="flex items-center gap-2 mt-4">
+                      <Sheet>
+                        <SheetTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditarCliente(cliente)}
+                          >
+                            <Edit2 className="w-4 h-4 mr-2" />
+                            Editar
+                          </Button>
+                        </SheetTrigger>
+                        <SheetContent className="bg-white">
+                          <SheetHeader>
+                            <SheetTitle>Editar Cliente</SheetTitle>
+                          </SheetHeader>
+                          <div className="space-y-4 mt-4">
+                            <Input
+                              placeholder="Nome"
+                              value={novoCliente.nome}
+                              onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Telefone"
+                              value={novoCliente.telefone}
+                              onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Email"
+                              type="email"
+                              value={novoCliente.email}
+                              onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
+                            />
+                            <Input
+                              placeholder="Endereço"
+                              value={novoCliente.endereco}
+                              onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                            />
+                            <Input
+                              type="date"
+                              placeholder="Aniversário"
+                              value={novoCliente.aniversario}
+                              onChange={(e) => setNovoCliente({ ...novoCliente, aniversario: e.target.value })}
+                            />
+                            <div>
+                              <p className="mb-2 text-sm text-gray-600">Classificação</p>
+                              <StarRating
+                                value={novoCliente.classificacao}
+                                onChange={(rating) => setNovoCliente({ ...novoCliente, classificacao: rating })}
+                              />
+                            </div>
+                            <Button 
+                              className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]"
+                              onClick={handleAdicionarCliente}
+                            >
+                              Salvar Alterações
+                            </Button>
+                          </div>
+                        </SheetContent>
+                      </Sheet>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-white">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Deseja excluir este cliente? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleExcluirCliente(cliente.id)}
+                              className="bg-red-500 hover:bg-red-600"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))
+          )}
+        </Accordion>
+      )}
     </div>
   );
 }
