@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -290,14 +289,9 @@ export default function Auth() {
 
         <div className="flex flex-col space-y-2 text-center">
           {view === "login" && (
-            <>
-              <Button variant="link" className="p-0 h-auto" onClick={() => setView("forgotPassword")}>
-                Esqueceu a senha?
-              </Button>
-              <Button variant="link" className="p-0 h-auto" onClick={() => setView("signup")}>
-                Não tem uma conta? Crie uma
-              </Button>
-            </>
+            <Button variant="link" className="p-0 h-auto" onClick={() => setView("signup")}>
+              Não tem uma conta? Crie uma
+            </Button>
           )}
           {view === "signup" && (
             <Button variant="link" className="p-0 h-auto" onClick={() => setView("login")}>
