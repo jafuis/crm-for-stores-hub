@@ -7,7 +7,6 @@ import { Package, Search, Edit, Trash2, Plus, MinusIcon, PlusIcon } from "lucide
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface Produto {
   id: string;
@@ -15,7 +14,6 @@ interface Produto {
   quantity: number;
   unit_price: number;
   supplier?: string;
-  owner_id?: string;
 }
 
 export default function Estoque() {
@@ -29,22 +27,16 @@ export default function Estoque() {
   });
   const [produtoEditando, setProdutoEditando] = useState<Produto | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      fetchProdutos();
-    }
-  }, [user]);
+    fetchProdutos();
+  }, []);
 
   const fetchProdutos = async () => {
     try {
-      if (!user) return;
-
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .eq('owner_id', user.id)
         .order('name');
       
       if (error) throw error;
@@ -60,7 +52,7 @@ export default function Estoque() {
   };
 
   const handleAdicionarProduto = async () => {
-    if (!novoProduto.name || !novoProduto.quantity || !novoProduto.unit_price || !user) {
+    if (!novoProduto.name || !novoProduto.quantity || !novoProduto.unit_price) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -76,8 +68,7 @@ export default function Estoque() {
           name: novoProduto.name,
           quantity: Number(novoProduto.quantity),
           unit_price: Number(novoProduto.unit_price),
-          supplier: novoProduto.supplier || null,
-          owner_id: user.id
+          supplier: novoProduto.supplier || null
         }])
         .select()
         .single();
