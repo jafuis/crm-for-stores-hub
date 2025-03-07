@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { v4 as uuidv4 } from 'uuid';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +19,17 @@ interface Fornecedor {
   products: string;
   created_at?: string;
   owner_id?: string;
+}
+
+interface DatabaseSupplier {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  created_at: string;
+  owner_id: string | null;
+  products?: string;
 }
 
 export default function Fornecedores() {
@@ -56,9 +65,15 @@ export default function Fornecedores() {
       
       if (error) throw error;
       
-      const fornecedoresData = data?.map(supplier => ({
-        ...supplier,
-        products: supplier.products || ""
+      const fornecedoresData = data?.map((supplier: DatabaseSupplier) => ({
+        id: supplier.id,
+        name: supplier.name,
+        email: supplier.email || "",
+        phone: supplier.phone || "",
+        address: supplier.address || "",
+        products: supplier.products || "",
+        created_at: supplier.created_at,
+        owner_id: supplier.owner_id
       })) || [];
       
       setFornecedores(fornecedoresData);
@@ -105,7 +120,18 @@ export default function Fornecedores() {
 
       if (error) throw error;
 
-      setFornecedores([...fornecedores, data]);
+      const newFornecedor: Fornecedor = {
+        id: data.id,
+        name: data.name,
+        email: data.email || "",
+        phone: data.phone || "",
+        address: data.address || "",
+        products: data.products || "",
+        created_at: data.created_at,
+        owner_id: data.owner_id
+      };
+
+      setFornecedores([...fornecedores, newFornecedor]);
       setNovoFornecedor({
         id: "",
         name: "",
