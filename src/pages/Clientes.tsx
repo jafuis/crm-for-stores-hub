@@ -72,7 +72,7 @@ export default function Clientes() {
         nome: customer.name,
         email: customer.email || '',
         telefone: customer.phone || '',
-        endereco: customer.address || '', // Handle the address field even if it doesn't exist yet
+        endereco: customer.address !== undefined ? customer.address : '', // Safely handle the address field
         aniversario: customer.birthday || '',
         classificacao: customer.classification || 1,
         owner_id: customer.owner_id
