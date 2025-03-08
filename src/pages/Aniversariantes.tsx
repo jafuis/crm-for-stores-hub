@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Gift, MessageSquare, SortAsc, SortDesc } from "lucide-react";
-import { format, isSameDay, parseISO } from "date-fns";
+import { format, isSameDay, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 
@@ -30,14 +30,22 @@ export default function Aniversariantes() {
       const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
         if (!cliente.aniversario) return false;
         
-        // Converter a string de data para objeto Date
-        const aniversario = parseISO(cliente.aniversario);
-        
-        // Comparar apenas o dia e mês, ignorando o ano
-        return isSameDay(
-          new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
-          new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
-        );
+        try {
+          // Converter a string de data para objeto Date
+          const aniversario = parseISO(cliente.aniversario);
+          
+          // Garantir que a data é válida
+          if (!isValid(aniversario)) return false;
+          
+          // Comparar apenas o dia e mês, ignorando o ano
+          return isSameDay(
+            new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+            new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+          );
+        } catch (error) {
+          console.error("Erro ao processar data de aniversário:", error);
+          return false;
+        }
       });
       
       const aniversariantesOrdenados = [...aniversariantesHoje].sort((a, b) => {
@@ -53,10 +61,19 @@ export default function Aniversariantes() {
 
     carregarAniversariantes();
 
+    // Adicionar eventos para detectar mudanças nos dados
     window.addEventListener('storage', carregarAniversariantes);
+    
+    // Criar um evento customizado para detectar mudanças nos dados sem recarregar a página
+    window.addEventListener('clientDataChanged', carregarAniversariantes);
+    
+    // Verificar aniversariantes periodicamente (a cada minuto)
+    const intervalId = setInterval(carregarAniversariantes, 60000);
 
     return () => {
       window.removeEventListener('storage', carregarAniversariantes);
+      window.removeEventListener('clientDataChanged', carregarAniversariantes);
+      clearInterval(intervalId);
     };
   }, [ordenacao]);
 

@@ -136,7 +136,7 @@ export function AppSidebar() {
         .from('tasks')
         .select('*')
         .eq('status', 'pending')
-        .eq('owner_id', supabase.auth.getUser().then(({ data }) => data.user?.id));
+        .eq('owner_id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {
         throw error;
@@ -167,7 +167,7 @@ export function AppSidebar() {
           if (!cliente.aniversario) return false;
           try {
             const aniversario = parseISO(cliente.aniversario);
-            return isSameDay(
+            return isValid(aniversario) && isSameDay(
               new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
               new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
             );
@@ -218,7 +218,9 @@ export function AppSidebar() {
                     {item.title === "Aniversariantes" ? (
                       <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
                     ) : item.title === "Tarefas" ? (
-                      <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
+                      <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
+                        <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
+                      </div>
                     ) : (
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
@@ -231,7 +233,7 @@ export function AppSidebar() {
                       </>
                     )}
 
-                    {/* Notification indicator for pending tasks */}
+                    {/* Notification indicator for pending tasks - Enhanced with blue color */}
                     {(item.path === "/tarefas" && hasPendingTasks && location.pathname !== "/tarefas") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
