@@ -14,7 +14,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      // Usuário não está autenticado e não está na página de autenticação
+      // User is not authenticated and not on the auth page
       if (!user && location.pathname !== "/auth") {
         toast({
           title: "Acesso restrito",
@@ -23,7 +23,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         });
         navigate("/auth");
       } 
-      // Usuário está autenticado e está tentando acessar a página de autenticação
+      // User is authenticated and trying to access the auth page
       else if (user && location.pathname === "/auth") {
         toast({
           title: "Você já está logado",
@@ -37,7 +37,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, navigate, location.pathname, toast]);
 
-  // Mostrar indicador de carregamento enquanto verifica ou redireciona
+  // Show loading indicator while verifying authentication
   if (loading || !verified) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background/50">

@@ -11,6 +11,14 @@ type AuthContextType = {
   isDarkMode: boolean;
   setIsDarkMode: (value: boolean) => void;
   setUser: (user: User | null) => void;
+  userProfile: UserProfile | null;
+};
+
+type UserProfile = {
+  id: string;
+  name: string | null;
+  area: string;
+  role: string | null;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,6 +29,7 @@ const AuthContext = createContext<AuthContextType>({
   isDarkMode: false,
   setIsDarkMode: () => {},
   setUser: () => {},
+  userProfile: null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -28,6 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     // Check if dark mode is active in localStorage or in system preferences
@@ -44,6 +54,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Function to fetch user profile from profiles table
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+      }
+
+      return profile as UserProfile;
+    } catch (error) {
+      console.error("Error in fetchUserProfile:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     // Check current session on page load
     const checkSession = async () => {
@@ -51,6 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id);
+          setUserProfile(profile);
+        }
       } catch (error) {
         console.error("Error checking session:", error);
       } finally {
@@ -62,9 +98,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set up listener for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id);
+          setUserProfile(profile);
+        } else {
+          setUserProfile(null);
+        }
         setLoading(false);
       }
     );
@@ -78,6 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      setUserProfile(null);
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -95,6 +139,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleSetUser = (newUser: User | null) => {
+    setUser(newUser);
+    if (newUser) {
+      fetchUserProfile(newUser.id).then(profile => {
+        setUserProfile(profile);
+      });
+    } else {
+      setUserProfile(null);
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -103,7 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut, 
       isDarkMode, 
       setIsDarkMode: handleSetIsDarkMode,
-      setUser
+      setUser: handleSetUser,
+      userProfile
     }}>
       {children}
     </AuthContext.Provider>
