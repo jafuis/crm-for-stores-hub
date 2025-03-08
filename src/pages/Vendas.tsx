@@ -19,6 +19,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useAuth } from "@/context/auth";
 
 interface Venda {
   id: string;
@@ -34,7 +35,9 @@ export default function Vendas() {
   const [mostrarArquivadas, setMostrarArquivadas] = useState(false);
   const [vendaSendoEditada, setVendaSendoEditada] = useState<Venda | null>(null);
   const [diasAbertos, setDiasAbertos] = useState<Record<string, boolean>>({});
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const obterDataHoraAtual = () => {
     const agora = new Date();
@@ -48,63 +51,50 @@ export default function Vendas() {
   });
 
   useEffect(() => {
-    const storedVendas = localStorage.getItem('vendas');
-    if (storedVendas) {
-      const todasVendas = JSON.parse(storedVendas);
-      
-      const ultimoDia = localStorage.getItem('ultimoDiaVendas');
-      const diaAtual = format(new Date(), 'yyyy-MM-dd');
-      
-      if (ultimoDia !== diaAtual) {
-        const vendasAtualizadas = todasVendas.map((venda: Venda) => {
-          const dataVenda = parseISO(venda.data);
-          if (isValid(dataVenda)) {
-            const diaVenda = format(dataVenda, 'yyyy-MM-dd');
-            if (diaVenda !== diaAtual && !venda.arquivada) {
-              return { ...venda, arquivada: true };
-            }
-          }
-          return venda;
-        });
-        
-        setVendas(vendasAtualizadas);
-        localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
-        localStorage.setItem('ultimoDiaVendas', diaAtual);
-      } else {
-        const vendasComDia = todasVendas.map((venda: Venda) => {
-          try {
-            const dataVenda = parseISO(venda.data);
-            if (isValid(dataVenda)) {
-              return {
-                ...venda,
-                dia: format(dataVenda, 'yyyy-MM-dd')
-              };
-            }
-          } catch (e) {
-            console.error("Erro ao processar data de venda:", e);
-          }
-          return venda;
-        });
-        
-        setVendas(vendasComDia);
-      }
+    if (user) {
+      fetchVendas();
     }
+  }, [user]);
+
+  const fetchVendas = async () => {
+    if (!user) return;
     
-    const intervalId = setInterval(() => {
-      const ultimoDia = localStorage.getItem('ultimoDiaVendas');
-      const diaAtual = format(new Date(), 'yyyy-MM-dd');
-      
-      if (ultimoDia !== diaAtual) {
-        localStorage.setItem('ultimoDiaVendas', diaAtual);
-        window.location.reload();
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        throw error;
       }
-    }, 60000);
 
-    return () => clearInterval(intervalId);
-  }, []);
+      const vendasFormatadas = data.map(sale => ({
+        id: sale.id,
+        valor: sale.total_amount,
+        data: sale.created_at,
+        produto: sale.payment_method,
+        arquivada: sale.status === 'archived',
+        dia: format(parseISO(sale.created_at), 'yyyy-MM-dd')
+      }));
 
-  const handleRegistrarVenda = () => {
-    if (!novaVenda.valor) {
+      setVendas(vendasFormatadas);
+    } catch (error) {
+      console.error('Erro ao buscar vendas:', error);
+      toast({
+        title: "Erro ao carregar vendas",
+        description: "Não foi possível carregar suas vendas. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegistrarVenda = async () => {
+    if (!novaVenda.valor || !user) {
       toast({
         title: "Erro",
         description: "Por favor, insira um valor para a venda",
@@ -113,75 +103,167 @@ export default function Vendas() {
       return;
     }
 
-    const venda: Venda = {
-      id: (vendas.length + 1).toString(),
-      valor: parseFloat(novaVenda.valor),
-      produto: novaVenda.produto,
-      data: novaVenda.data,
-      arquivada: false,
-      dia: format(parseISO(novaVenda.data), 'yyyy-MM-dd')
-    };
+    try {
+      const { data, error } = await supabase
+        .from('sales')
+        .insert({
+          total_amount: parseFloat(novaVenda.valor),
+          payment_method: novaVenda.produto || null,
+          created_at: novaVenda.data,
+          owner_id: user.id,
+          status: 'completed'
+        })
+        .select('*')
+        .single();
 
-    const novasVendas = [venda, ...vendas];
-    setVendas(novasVendas);
-    localStorage.setItem('vendas', JSON.stringify(novasVendas));
+      if (error) {
+        throw error;
+      }
 
-    toast({
-      title: "Venda registrada",
-      description: `Venda de ${formatarValor(venda.valor)} registrada com sucesso!`,
-    });
+      const novaVendaFormatada: Venda = {
+        id: data.id,
+        valor: data.total_amount,
+        produto: data.payment_method || "",
+        data: data.created_at,
+        arquivada: false,
+        dia: format(parseISO(data.created_at), 'yyyy-MM-dd')
+      };
 
-    setNovaVenda({
-      valor: "",
-      produto: "",
-      data: obterDataHoraAtual(),
-    });
+      setVendas([novaVendaFormatada, ...vendas]);
+
+      toast({
+        title: "Venda registrada",
+        description: `Venda de ${formatarValor(novaVendaFormatada.valor)} registrada com sucesso!`,
+      });
+
+      setNovaVenda({
+        valor: "",
+        produto: "",
+        data: obterDataHoraAtual(),
+      });
+    } catch (error) {
+      console.error('Erro ao registrar venda:', error);
+      toast({
+        title: "Erro ao registrar venda",
+        description: "Não foi possível registrar a venda. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleArquivarVenda = (id: string) => {
-    const vendasAtualizadas = vendas.map(venda => 
-      venda.id === id 
-        ? { ...venda, arquivada: !venda.arquivada }
-        : venda
-    );
-    setVendas(vendasAtualizadas);
-    localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+  const handleArquivarVenda = async (id: string) => {
+    if (!user) return;
+    
+    const vendaAtual = vendas.find(v => v.id === id);
+    if (!vendaAtual) return;
+    
+    const novoStatus = vendaAtual.arquivada ? 'completed' : 'archived';
+    
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .update({
+          status: novoStatus
+        })
+        .eq('id', id)
+        .eq('owner_id', user.id);
 
-    toast({
-      title: "Venda atualizada",
-      description: "Status da venda atualizado com sucesso!",
-    });
+      if (error) {
+        throw error;
+      }
+
+      const vendasAtualizadas = vendas.map(venda => 
+        venda.id === id 
+          ? { ...venda, arquivada: !venda.arquivada }
+          : venda
+      );
+      setVendas(vendasAtualizadas);
+
+      toast({
+        title: "Venda atualizada",
+        description: "Status da venda atualizado com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar venda:', error);
+      toast({
+        title: "Erro ao atualizar venda",
+        description: "Não foi possível atualizar o status da venda. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleExcluirVenda = (id: string) => {
-    const vendasAtualizadas = vendas.filter(venda => venda.id !== id);
-    setVendas(vendasAtualizadas);
-    localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
+  const handleExcluirVenda = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .delete()
+        .eq('id', id)
+        .eq('owner_id', user.id);
 
-    toast({
-      title: "Venda excluída",
-      description: "Venda removida com sucesso!",
-    });
+      if (error) {
+        throw error;
+      }
+
+      const vendasAtualizadas = vendas.filter(venda => venda.id !== id);
+      setVendas(vendasAtualizadas);
+
+      toast({
+        title: "Venda excluída",
+        description: "Venda removida com sucesso!",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir venda:', error);
+      toast({
+        title: "Erro ao excluir venda",
+        description: "Não foi possível excluir a venda. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSalvarEdicao = () => {
-    if (!vendaSendoEditada) return;
+  const handleSalvarEdicao = async () => {
+    if (!vendaSendoEditada || !user) return;
     
-    const vendasAtualizadas = vendas.map(venda => 
-      venda.id === vendaSendoEditada.id 
-        ? { ...vendaSendoEditada, dia: format(parseISO(vendaSendoEditada.data), 'yyyy-MM-dd') }
-        : venda
-    );
-    
-    setVendas(vendasAtualizadas);
-    localStorage.setItem('vendas', JSON.stringify(vendasAtualizadas));
-    
-    toast({
-      title: "Venda atualizada",
-      description: "As informações da venda foram atualizadas com sucesso!",
-    });
-    
-    setVendaSendoEditada(null);
+    try {
+      const { error } = await supabase
+        .from('sales')
+        .update({
+          total_amount: vendaSendoEditada.valor,
+          payment_method: vendaSendoEditada.produto || null,
+          created_at: vendaSendoEditada.data
+        })
+        .eq('id', vendaSendoEditada.id)
+        .eq('owner_id', user.id);
+
+      if (error) {
+        throw error;
+      }
+      
+      const vendasAtualizadas = vendas.map(venda => 
+        venda.id === vendaSendoEditada.id 
+          ? { ...vendaSendoEditada, dia: format(parseISO(vendaSendoEditada.data), 'yyyy-MM-dd') }
+          : venda
+      );
+      
+      setVendas(vendasAtualizadas);
+      
+      toast({
+        title: "Venda atualizada",
+        description: "As informações da venda foram atualizadas com sucesso!",
+      });
+      
+      setVendaSendoEditada(null);
+    } catch (error) {
+      console.error('Erro ao atualizar venda:', error);
+      toast({
+        title: "Erro ao atualizar venda",
+        description: "Não foi possível atualizar a venda. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
   const formatarValor = (valor: number) => {

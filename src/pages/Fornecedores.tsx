@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Plus, Trash2, FileEdit, Phone, Mail, MapPin } from "lucide-react";
+import { Plus, Trash2, FileEdit, Phone, Mail, MapPin, Search } from "lucide-react";
 
 interface Fornecedor {
   id: string;
@@ -26,6 +26,8 @@ export default function Fornecedores() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [fornecedoresFiltrados, setFornecedoresFiltrados] = useState<Fornecedor[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [novoFornecedor, setNovoFornecedor] = useState<Fornecedor>({
     id: "",
     name: "",
@@ -45,6 +47,21 @@ export default function Fornecedores() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (searchTerm.trim() === "") {
+      setFornecedoresFiltrados(fornecedores);
+    } else {
+      const filtered = fornecedores.filter(
+        (fornecedor) =>
+          fornecedor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          fornecedor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          fornecedor.products?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          fornecedor.phone?.includes(searchTerm)
+      );
+      setFornecedoresFiltrados(filtered);
+    }
+  }, [searchTerm, fornecedores]);
+
   const fetchFornecedores = async () => {
     try {
       setIsLoading(true);
@@ -61,6 +78,7 @@ export default function Fornecedores() {
       })) || [];
       
       setFornecedores(fornecedoresData);
+      setFornecedoresFiltrados(fornecedoresData);
     } catch (error) {
       console.error('Erro ao buscar fornecedores:', error);
       toast({
@@ -214,79 +232,90 @@ export default function Fornecedores() {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
         <h1 className="text-2xl font-bold">Fornecedores</h1>
-        <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
-          <DialogTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]">
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Fornecedor
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
-              <DialogDescription>
-                Preencha os dados do fornecedor abaixo.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="nome" className="text-sm font-medium">Nome*</label>
-                <Input
-                  id="nome"
-                  value={novoFornecedor.name}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, name: e.target.value})}
-                  placeholder="Nome do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email*</label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={novoFornecedor.email}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, email: e.target.value})}
-                  placeholder="Email do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="telefone" className="text-sm font-medium">Telefone</label>
-                <Input
-                  id="telefone"
-                  value={novoFornecedor.phone}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, phone: e.target.value})}
-                  placeholder="Telefone do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="endereco" className="text-sm font-medium">Endereço</label>
-                <Input
-                  id="endereco"
-                  value={novoFornecedor.address}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, address: e.target.value})}
-                  placeholder="Endereço do fornecedor"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="produtos" className="text-sm font-medium">Produtos</label>
-                <Textarea
-                  id="produtos"
-                  value={novoFornecedor.products}
-                  onChange={(e) => setNovoFornecedor({...novoFornecedor, products: e.target.value})}
-                  placeholder="Produtos fornecidos"
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
-              <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]" onClick={handleAdicionarFornecedor}>
-                Adicionar
+        <div className="flex flex-col md:flex-row w-full md:w-auto gap-3">
+          <div className="relative flex-grow md:w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <Input
+              className="pl-10"
+              placeholder="Buscar fornecedores..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          <Dialog open={dialogAberto} onOpenChange={setDialogAberto}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto whitespace-nowrap">
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Fornecedor
               </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Novo Fornecedor</DialogTitle>
+                <DialogDescription>
+                  Preencha os dados do fornecedor abaixo.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="nome" className="text-sm font-medium">Nome*</label>
+                  <Input
+                    id="nome"
+                    value={novoFornecedor.name}
+                    onChange={(e) => setNovoFornecedor({...novoFornecedor, name: e.target.value})}
+                    placeholder="Nome do fornecedor"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="email" className="text-sm font-medium">Email*</label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={novoFornecedor.email}
+                    onChange={(e) => setNovoFornecedor({...novoFornecedor, email: e.target.value})}
+                    placeholder="Email do fornecedor"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="telefone" className="text-sm font-medium">Telefone</label>
+                  <Input
+                    id="telefone"
+                    value={novoFornecedor.phone}
+                    onChange={(e) => setNovoFornecedor({...novoFornecedor, phone: e.target.value})}
+                    placeholder="Telefone do fornecedor"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="endereco" className="text-sm font-medium">Endereço</label>
+                  <Input
+                    id="endereco"
+                    value={novoFornecedor.address}
+                    onChange={(e) => setNovoFornecedor({...novoFornecedor, address: e.target.value})}
+                    placeholder="Endereço do fornecedor"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="produtos" className="text-sm font-medium">Produtos</label>
+                  <Textarea
+                    id="produtos"
+                    value={novoFornecedor.products}
+                    onChange={(e) => setNovoFornecedor({...novoFornecedor, products: e.target.value})}
+                    placeholder="Produtos fornecidos"
+                    rows={3}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogAberto(false)}>Cancelar</Button>
+                <Button className="bg-[#9b87f5] hover:bg-[#7e69ab]" onClick={handleAdicionarFornecedor}>
+                  Adicionar
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -295,13 +324,17 @@ export default function Fornecedores() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {fornecedores.length === 0 ? (
+          {fornecedoresFiltrados.length === 0 ? (
             <Card className="p-8 text-center col-span-full">
-              <h3 className="text-lg font-medium text-gray-500">Nenhum fornecedor encontrado</h3>
-              <p className="text-gray-400 mt-2">Adicione fornecedores para começar</p>
+              <h3 className="text-lg font-medium text-gray-500">
+                {searchTerm ? "Nenhum fornecedor encontrado para essa busca" : "Nenhum fornecedor encontrado"}
+              </h3>
+              <p className="text-gray-400 mt-2">
+                {searchTerm ? "Tente outros termos de busca" : "Adicione fornecedores para começar"}
+              </p>
             </Card>
           ) : (
-            fornecedores.map((fornecedor) => (
+            fornecedoresFiltrados.map((fornecedor) => (
               <Card key={fornecedor.id} className="p-6 relative">
                 <div className="absolute top-4 right-4 flex gap-2">
                   <Button
