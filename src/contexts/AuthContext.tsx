@@ -10,7 +10,7 @@ type AuthContextType = {
   signOut: () => Promise<void>;
   isDarkMode: boolean;
   setIsDarkMode: (value: boolean) => void;
-  setUser: (user: User | null) => void; // Add the setUser property to the interface
+  setUser: (user: User | null) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,7 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   isDarkMode: false,
   setIsDarkMode: () => {},
-  setUser: () => {}, // Add the default value for setUser
+  setUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -45,14 +45,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Verifica a sessão atual no carregamento da página
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // Check current session on page load
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+      } catch (error) {
+        console.error("Error checking session:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
 
-    // Configurar listener para alterações na autenticação
+    // Set up listener for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -61,14 +69,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Limpar o subscription quando o componente for desmontado
+    // Clean up subscription when component is unmounted
     return () => {
       subscription.unsubscribe();
     };
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleSetIsDarkMode = (value: boolean) => {
@@ -91,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut, 
       isDarkMode, 
       setIsDarkMode: handleSetIsDarkMode,
-      setUser // Expose the setUser function to consumers of this context
+      setUser
     }}>
       {children}
     </AuthContext.Provider>

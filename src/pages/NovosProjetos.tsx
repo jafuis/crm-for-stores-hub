@@ -15,7 +15,8 @@ import {
   ChevronDown,
   Lightbulb,
   ListChecks,
-  Clock
+  Clock,
+  Loader2
 } from "lucide-react";
 import {
   Accordion,
@@ -33,6 +34,8 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Etapa {
   id: string;
@@ -52,6 +55,7 @@ interface Projeto {
 
 export default function NovosProjetos() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [projetos, setProjetos] = useState<Projeto[]>([]);
   const [buscaProjeto, setBuscaProjeto] = useState("");
   const [novoProjeto, setNovoProjeto] = useState<Omit<Projeto, "id" | "progresso">>({
@@ -64,23 +68,68 @@ export default function NovosProjetos() {
   const [novaEtapa, setNovaEtapa] = useState<Omit<Etapa, "id" | "concluida">>({
     descricao: ""
   });
-  
+  const [isLoading, setIsLoading] = useState(true);
   const [projetoAtual, setProjetoAtual] = useState<string | null>(null);
   const [modoEdicao, setModoEdicao] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Carregar projetos do localStorage
+  // Carregar projetos do Supabase
   useEffect(() => {
-    const projetosSalvos = localStorage.getItem('projetos');
-    if (projetosSalvos) {
-      setProjetos(JSON.parse(projetosSalvos));
-    }
-  }, []);
+    const fetchProjetos = async () => {
+      if (!user) return;
+      
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('*')
+          .order('titulo');
+          
+        if (error) throw error;
+        
+        if (data) {
+          // Map data from Supabase to our format
+          const projetosFormatados: Projeto[] = data.map(item => ({
+            id: item.id,
+            titulo: item.titulo,
+            descricao: item.descricao || "",
+            dataInicio: item.data_inicio || "",
+            dataFim: item.data_fim || "",
+            etapas: item.etapas || [],
+            progresso: calcularProgresso(item.etapas || [])
+          }));
+          
+          setProjetos(projetosFormatados);
+        }
+      } catch (error) {
+        console.error('Error fetching projetos:', error);
+        toast({
+          title: "Erro ao carregar projetos",
+          description: "Não foi possível carregar seus projetos. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  // Salvar projetos no localStorage
-  useEffect(() => {
-    localStorage.setItem('projetos', JSON.stringify(projetos));
-  }, [projetos]);
+    fetchProjetos();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:projects')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'projects' },
+        payload => {
+          fetchProjetos();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, toast]);
 
   // Função para calcular o progresso do projeto
   const calcularProgresso = (etapas: Etapa[]): number => {
@@ -89,8 +138,10 @@ export default function NovosProjetos() {
     return Math.round((etapasConcluidas / etapas.length) * 100);
   };
 
-  // Adicionar novo projeto
-  const handleAdicionarProjeto = () => {
+  // Adicionar ou editar projeto
+  const handleAdicionarProjeto = async () => {
+    if (!user) return;
+    
     if (!novoProjeto.titulo) {
       toast({
         title: "Erro",
@@ -100,54 +151,67 @@ export default function NovosProjetos() {
       return;
     }
 
-    const novoId = Date.now().toString();
-    
-    if (modoEdicao && projetoAtual) {
-      // Atualizar projeto existente
-      const projetosAtualizados = projetos.map(projeto => {
-        if (projeto.id === projetoAtual) {
-          const etapasAtualizadas = [...novoProjeto.etapas];
-          return {
-            ...projeto,
-            ...novoProjeto,
-            etapas: etapasAtualizadas,
-            progresso: calcularProgresso(etapasAtualizadas)
-          };
-        }
-        return projeto;
-      });
+    try {
+      setIsLoading(true);
       
-      setProjetos(projetosAtualizados);
-      toast({
-        title: "Projeto atualizado",
-        description: "O projeto foi atualizado com sucesso",
-      });
-    } else {
-      // Adicionar novo projeto
-      const projeto: Projeto = {
-        id: novoId,
-        ...novoProjeto,
-        progresso: 0
+      // Prepare data for Supabase
+      const projetoData = {
+        titulo: novoProjeto.titulo,
+        descricao: novoProjeto.descricao,
+        data_inicio: novoProjeto.dataInicio,
+        data_fim: novoProjeto.dataFim,
+        etapas: novoProjeto.etapas,
+        owner_id: user.id
       };
       
-      setProjetos([...projetos, projeto]);
-      toast({
-        title: "Projeto adicionado",
-        description: "O projeto foi adicionado com sucesso",
+      if (modoEdicao && projetoAtual) {
+        // Update existing project
+        const { error } = await supabase
+          .from('projects')
+          .update(projetoData)
+          .eq('id', projetoAtual);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Projeto atualizado",
+          description: "O projeto foi atualizado com sucesso",
+        });
+      } else {
+        // Add new project
+        const { error } = await supabase
+          .from('projects')
+          .insert([projetoData]);
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Projeto adicionado",
+          description: "O projeto foi adicionado com sucesso",
+        });
+      }
+      
+      // Reset form
+      setNovoProjeto({
+        titulo: "",
+        descricao: "",
+        dataInicio: "",
+        dataFim: "",
+        etapas: []
       });
+      setModoEdicao(false);
+      setProjetoAtual(null);
+      setDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving project:', error);
+      toast({
+        title: "Erro ao salvar projeto",
+        description: "Não foi possível salvar o projeto. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Resetar formulário
-    setNovoProjeto({
-      titulo: "",
-      descricao: "",
-      dataInicio: "",
-      dataFim: "",
-      etapas: []
-    });
-    setModoEdicao(false);
-    setProjetoAtual(null);
-    setDialogOpen(false);
   };
 
   // Adicionar nova etapa ao projeto
@@ -177,12 +241,32 @@ export default function NovosProjetos() {
   };
 
   // Excluir projeto
-  const handleExcluirProjeto = (id: string) => {
-    setProjetos(projetos.filter(projeto => projeto.id !== id));
-    toast({
-      title: "Projeto excluído",
-      description: "O projeto foi excluído com sucesso",
-    });
+  const handleExcluirProjeto = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Projeto excluído",
+        description: "O projeto foi excluído com sucesso",
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Erro ao excluir projeto",
+        description: "Não foi possível excluir o projeto. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Editar projeto
@@ -200,26 +284,53 @@ export default function NovosProjetos() {
   };
 
   // Atualizar status da etapa (concluída/não concluída)
-  const handleToggleEtapa = (projetoId: string, etapaId: string) => {
-    const projetosAtualizados = projetos.map(projeto => {
-      if (projeto.id === projetoId) {
-        const etapasAtualizadas = projeto.etapas.map(etapa => {
-          if (etapa.id === etapaId) {
-            return { ...etapa, concluida: !etapa.concluida };
-          }
-          return etapa;
-        });
-        
-        return {
-          ...projeto,
-          etapas: etapasAtualizadas,
-          progresso: calcularProgresso(etapasAtualizadas)
-        };
-      }
-      return projeto;
-    });
+  const handleToggleEtapa = async (projetoId: string, etapaId: string) => {
+    if (!user) return;
     
-    setProjetos(projetosAtualizados);
+    try {
+      // Find project and update etapa status
+      const projeto = projetos.find(p => p.id === projetoId);
+      if (!projeto) return;
+      
+      const etapasAtualizadas = projeto.etapas.map(etapa => {
+        if (etapa.id === etapaId) {
+          return { ...etapa, concluida: !etapa.concluida };
+        }
+        return etapa;
+      });
+      
+      // Calculate new progress
+      const novoProgresso = calcularProgresso(etapasAtualizadas);
+      
+      // Update project in Supabase
+      const { error } = await supabase
+        .from('projects')
+        .update({ 
+          etapas: etapasAtualizadas
+        })
+        .eq('id', projetoId);
+        
+      if (error) throw error;
+      
+      // Update local state for immediate UI update
+      setProjetos(projetos.map(p => {
+        if (p.id === projetoId) {
+          return {
+            ...p,
+            etapas: etapasAtualizadas,
+            progresso: novoProgresso
+          };
+        }
+        return p;
+      }));
+    } catch (error) {
+      console.error('Error updating etapa:', error);
+      toast({
+        title: "Erro ao atualizar etapa",
+        description: "Não foi possível atualizar o status da etapa.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Filtrar projetos pela busca
@@ -401,8 +512,16 @@ export default function NovosProjetos() {
                 <Button 
                   className="bg-[#9b87f5] hover:bg-[#7e69ab]"
                   onClick={handleAdicionarProjeto}
+                  disabled={isLoading}
                 >
-                  {modoEdicao ? "Salvar Alterações" : "Criar Projeto"}
+                  {isLoading ? (
+                    <div className="flex items-center">
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processando...
+                    </div>
+                  ) : (
+                    modoEdicao ? "Salvar Alterações" : "Criar Projeto"
+                  )}
                 </Button>
               </div>
             </div>
@@ -420,7 +539,11 @@ export default function NovosProjetos() {
       </div>
       
       <div className="grid grid-cols-1 gap-4">
-        {projetosFiltrados.length === 0 ? (
+        {isLoading && projetos.length === 0 ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : projetosFiltrados.length === 0 ? (
           <Card className="p-8 text-center">
             <Lightbulb className="w-12 h-12 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium mb-2">Nenhum projeto encontrado</h3>
@@ -562,7 +685,7 @@ export default function NovosProjetos() {
                                 onClick={() => handleExcluirProjeto(projeto.id)}
                                 className="bg-red-500 hover:bg-red-600"
                               >
-                                Excluir
+                                {isLoading ? "Processando..." : "Excluir"}
                               </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>

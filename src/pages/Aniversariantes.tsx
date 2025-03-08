@@ -6,6 +6,8 @@ import { Gift, MessageSquare, SortAsc, SortDesc } from "lucide-react";
 import { format, isSameDay, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Cliente {
   id: string;
@@ -18,64 +20,93 @@ interface Cliente {
 export default function Aniversariantes() {
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [ordenacao, setOrdenacao] = useState<'asc' | 'desc'>('asc');
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    const carregarAniversariantes = () => {
-      const clientesSalvos = localStorage.getItem('clientes');
-      const clientes = clientesSalvos ? JSON.parse(clientesSalvos) : [];
+    const carregarAniversariantes = async () => {
+      if (!user) return;
       
-      // Obter data atual no fuso horário brasileiro
-      const hoje = new Date();
-      const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-        if (!cliente.aniversario) return false;
+      setIsLoading(true);
+      try {
+        // Fetch customers from Supabase
+        const { data, error } = await supabase
+          .from('customers')
+          .select('id, name, phone, email, birthday');
+          
+        if (error) throw error;
         
-        try {
-          // Converter a string de data para objeto Date
-          const aniversario = parseISO(cliente.aniversario);
-          
-          // Garantir que a data é válida
-          if (!isValid(aniversario)) return false;
-          
-          // Comparar apenas o dia e mês, ignorando o ano
-          return isSameDay(
-            new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
-            new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
-          );
-        } catch (error) {
-          console.error("Erro ao processar data de aniversário:", error);
-          return false;
-        }
-      });
-      
-      const aniversariantesOrdenados = [...aniversariantesHoje].sort((a, b) => {
-        if (ordenacao === 'asc') {
-          return a.nome.localeCompare(b.nome, 'pt-BR');
-        } else {
-          return b.nome.localeCompare(a.nome, 'pt-BR');
-        }
-      });
-      
-      setAniversariantes(aniversariantesOrdenados);
+        // Filter birthday matches and map to our format
+        const hoje = new Date();
+        const aniversariantesHoje = data
+          .filter(cliente => {
+            if (!cliente.birthday) return false;
+            
+            try {
+              const aniversario = parseISO(cliente.birthday);
+              if (!isValid(aniversario)) return false;
+              
+              return isSameDay(
+                new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
+                new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+              );
+            } catch (error) {
+              console.error("Erro ao processar data de aniversário:", error);
+              return false;
+            }
+          })
+          .map(cliente => ({
+            id: cliente.id,
+            nome: cliente.name,
+            telefone: cliente.phone || '',
+            email: cliente.email || '',
+            aniversario: cliente.birthday || ''
+          }));
+        
+        // Sort aniversariantes
+        const aniversariantesOrdenados = [...aniversariantesHoje].sort((a, b) => {
+          if (ordenacao === 'asc') {
+            return a.nome.localeCompare(b.nome, 'pt-BR');
+          } else {
+            return b.nome.localeCompare(a.nome, 'pt-BR');
+          }
+        });
+        
+        setAniversariantes(aniversariantesOrdenados);
+      } catch (error) {
+        console.error('Error fetching aniversariantes:', error);
+        toast({
+          title: "Erro ao carregar aniversariantes",
+          description: "Não foi possível carregar os aniversariantes de hoje.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     carregarAniversariantes();
 
-    // Adicionar eventos para detectar mudanças nos dados
-    window.addEventListener('storage', carregarAniversariantes);
+    // Set up a real-time subscription for live updates
+    const channel = supabase
+      .channel('public:customers')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'customers' },
+        payload => {
+          carregarAniversariantes();
+        }
+      )
+      .subscribe();
     
-    // Criar um evento customizado para detectar mudanças nos dados sem recarregar a página
-    window.addEventListener('clientDataChanged', carregarAniversariantes);
-    
-    // Verificar aniversariantes periodicamente (a cada minuto)
-    const intervalId = setInterval(carregarAniversariantes, 60000);
+    // Check aniversariantes periodically (hourly)
+    const intervalId = setInterval(carregarAniversariantes, 3600000);
 
     return () => {
-      window.removeEventListener('storage', carregarAniversariantes);
-      window.removeEventListener('clientDataChanged', carregarAniversariantes);
+      supabase.removeChannel(channel);
       clearInterval(intervalId);
     };
-  }, [ordenacao]);
+  }, [user, ordenacao, toast]);
 
   const enviarMensagemWhatsApp = (telefone: string, nome: string) => {
     const telefoneFormatado = telefone.replace(/\D/g, '');
@@ -106,7 +137,14 @@ export default function Aniversariantes() {
         </Button>
       </div>
 
-      {aniversariantes.length > 0 ? (
+      {isLoading ? (
+        <div className="flex justify-center p-8">
+          <svg className="animate-spin h-8 w-8 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </div>
+      ) : aniversariantes.length > 0 ? (
         <div className="grid gap-4">
           {aniversariantes.map((aniversariante) => (
             <Card key={aniversariante.id} className="p-4 md:p-6 border-l-4 border-l-pink-500">
