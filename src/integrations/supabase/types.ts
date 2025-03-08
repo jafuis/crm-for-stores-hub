@@ -99,6 +99,39 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          etapas: Json | null
+          id: string
+          owner_id: string | null
+          titulo: string
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          etapas?: Json | null
+          id?: string
+          owner_id?: string | null
+          titulo: string
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          etapas?: Json | null
+          id?: string
+          owner_id?: string | null
+          titulo?: string
+        }
+        Relationships: []
+      }
       sale_items: {
         Row: {
           id: string
