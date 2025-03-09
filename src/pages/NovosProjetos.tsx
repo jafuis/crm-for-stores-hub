@@ -36,6 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Json } from "@/integrations/supabase/types";
 
 interface Etapa {
   id: string;
@@ -89,15 +90,22 @@ export default function NovosProjetos() {
         
         if (data) {
           // Map data from Supabase to our format
-          const projetosFormatados: Projeto[] = data.map(item => ({
-            id: item.id,
-            titulo: item.titulo,
-            descricao: item.descricao || "",
-            dataInicio: item.data_inicio || "",
-            dataFim: item.data_fim || "",
-            etapas: item.etapas || [],
-            progresso: calcularProgresso(item.etapas || [])
-          }));
+          const projetosFormatados: Projeto[] = data.map(item => {
+            // Garantir que etapas seja um array
+            const etapasArray = Array.isArray(item.etapas) 
+              ? item.etapas as Etapa[] 
+              : [];
+            
+            return {
+              id: item.id,
+              titulo: item.titulo,
+              descricao: item.descricao || "",
+              dataInicio: item.data_inicio || "",
+              dataFim: item.data_fim || "",
+              etapas: etapasArray,
+              progresso: calcularProgresso(etapasArray)
+            };
+          });
           
           setProjetos(projetosFormatados);
         }
@@ -160,7 +168,7 @@ export default function NovosProjetos() {
         descricao: novoProjeto.descricao,
         data_inicio: novoProjeto.dataInicio,
         data_fim: novoProjeto.dataFim,
-        etapas: novoProjeto.etapas,
+        etapas: novoProjeto.etapas as Json,
         owner_id: user.id
       };
       
@@ -306,7 +314,7 @@ export default function NovosProjetos() {
       const { error } = await supabase
         .from('projects')
         .update({ 
-          etapas: etapasAtualizadas
+          etapas: etapasAtualizadas as Json
         })
         .eq('id', projetoId);
         
