@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    // Check if dark mode is active in localStorage or in system preferences
+    // Verificar se o modo escuro está ativo no localStorage ou nas preferências do sistema
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Function to fetch user profile from profiles table
+  // Função para buscar o perfil do usuário da tabela profiles
   const fetchUserProfile = async (userId: string) => {
     try {
       const { data: profile, error } = await supabase
@@ -64,22 +64,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        console.error("Error fetching user profile:", error);
+        console.error("Erro ao buscar perfil do usuário:", error);
         return null;
       }
 
       return profile as UserProfile;
     } catch (error) {
-      console.error("Error in fetchUserProfile:", error);
+      console.error("Erro em fetchUserProfile:", error);
       return null;
     }
   };
 
   useEffect(() => {
-    // Check current session on page load
+    // Verificar sessão atual ao carregar a página
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          throw error;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -88,15 +93,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserProfile(profile);
         }
       } catch (error) {
-        console.error("Error checking session:", error);
+        console.error("Erro ao verificar sessão:", error);
       } finally {
+        // Sempre definir loading como false quando terminar
         setLoading(false);
       }
     };
     
     checkSession();
 
-    // Set up listener for auth state changes
+    // Configurar listener para mudanças no estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
@@ -108,11 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setUserProfile(null);
         }
+        
+        // Definir loading como false após processar a mudança de estado
         setLoading(false);
       }
     );
 
-    // Clean up subscription when component is unmounted
+    // Limpar inscrição quando o componente for desmontado
     return () => {
       subscription.unsubscribe();
     };
@@ -120,10 +128,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
+      setLoading(true); // Definir como carregando durante o logout
       await supabase.auth.signOut();
       setUserProfile(null);
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error("Erro ao fazer logout:", error);
+    } finally {
+      setLoading(false);
     }
   };
 

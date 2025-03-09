@@ -14,8 +14,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading) {
-      // User is not authenticated and not on the auth page
       if (!user && location.pathname !== "/auth") {
+        // Usuário não está autenticado e não está na página de autenticação
         toast({
           title: "Acesso restrito",
           description: "Faça login para acessar esta área",
@@ -23,8 +23,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         });
         navigate("/auth");
       } 
-      // User is authenticated and trying to access the auth page
       else if (user && location.pathname === "/auth") {
+        // Usuário está autenticado e está tentando acessar a página de autenticação
         toast({
           title: "Você já está logado",
           description: "Redirecionando para a página inicial",
@@ -32,13 +32,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         navigate("/");
       }
       else {
+        // Em todos os outros casos, marcar como verificado
         setVerified(true);
       }
     }
   }, [user, loading, navigate, location.pathname, toast]);
 
-  // Show loading indicator while verifying authentication
-  if (loading || !verified) {
+  // Se ainda estiver carregando dados de autenticação, mostrar indicador de carregamento
+  if (loading) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background/50">
         <div className="flex flex-col items-center gap-2">
@@ -49,5 +50,19 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Se já carregou e não foi redirecionado, mostrar o conteúdo
+  if (!verified && !loading) {
+    // Ainda estamos processando o redirecionamento
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-background/50">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Redirecionando...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Se já verificou a autenticação e não foi redirecionado, mostrar o conteúdo
   return <>{children}</>;
 }
