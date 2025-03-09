@@ -91,10 +91,17 @@ export default function NovosProjetos() {
         if (data) {
           // Map data from Supabase to our format
           const projetosFormatados: Projeto[] = data.map(item => {
-            // Garantir que etapas seja um array
-            const etapasArray = Array.isArray(item.etapas) 
-              ? item.etapas as Etapa[] 
-              : [];
+            // Convert JSON data to Etapa[] type safely
+            let etapasArray: Etapa[] = [];
+            
+            // Ensure the etapas field is an array before processing
+            if (Array.isArray(item.etapas)) {
+              etapasArray = (item.etapas as any[]).map(etapa => ({
+                id: etapa.id || String(Date.now()),
+                descricao: etapa.descricao || '',
+                concluida: Boolean(etapa.concluida)
+              }));
+            }
             
             return {
               id: item.id,
@@ -162,13 +169,20 @@ export default function NovosProjetos() {
     try {
       setIsLoading(true);
       
+      // Convert Etapa[] to Json format for Supabase
+      const etapasJson = novoProjeto.etapas.map(etapa => ({
+        id: etapa.id,
+        descricao: etapa.descricao,
+        concluida: etapa.concluida
+      }));
+      
       // Prepare data for Supabase
       const projetoData = {
         titulo: novoProjeto.titulo,
         descricao: novoProjeto.descricao,
         data_inicio: novoProjeto.dataInicio,
         data_fim: novoProjeto.dataFim,
-        etapas: novoProjeto.etapas as Json,
+        etapas: etapasJson as unknown as Json,
         owner_id: user.id
       };
       
@@ -310,11 +324,18 @@ export default function NovosProjetos() {
       // Calculate new progress
       const novoProgresso = calcularProgresso(etapasAtualizadas);
       
+      // Convert Etapa[] to Json format for Supabase
+      const etapasJson = etapasAtualizadas.map(etapa => ({
+        id: etapa.id,
+        descricao: etapa.descricao,
+        concluida: etapa.concluida
+      }));
+      
       // Update project in Supabase
       const { error } = await supabase
         .from('projects')
         .update({ 
-          etapas: etapasAtualizadas as Json
+          etapas: etapasJson as unknown as Json
         })
         .eq('id', projetoId);
         
