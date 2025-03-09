@@ -6,11 +6,19 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, userPreferences, addRecentView } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const [verified, setVerified] = useState(false);
+
+  // Registrar visualização da página atual
+  useEffect(() => {
+    if (user && !loading && location.pathname !== "/auth") {
+      // Registrar a página atual nas visualizações recentes
+      addRecentView(location.pathname);
+    }
+  }, [user, loading, location.pathname, addRecentView]);
 
   useEffect(() => {
     if (!loading) {
@@ -21,6 +29,9 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           description: "Faça login para acessar esta área",
           variant: "destructive",
         });
+        
+        // Salvar a página que o usuário tentou acessar para redirecionar depois do login
+        sessionStorage.setItem('redirectAfterLogin', location.pathname);
         navigate("/auth");
       } 
       // Usuário está autenticado e está tentando acessar a página de autenticação
@@ -29,7 +40,15 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           title: "Você já está logado",
           description: "Redirecionando para a página inicial",
         });
-        navigate("/");
+        
+        // Verificar se há um redirecionamento pendente
+        const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+        if (redirectPath) {
+          sessionStorage.removeItem('redirectAfterLogin');
+          navigate(redirectPath);
+        } else {
+          navigate("/");
+        }
       }
       else {
         setVerified(true);

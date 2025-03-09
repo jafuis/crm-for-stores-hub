@@ -3,6 +3,13 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
+type UserPreferences = {
+  recentViews?: string[];
+  lastVisitedPage?: string;
+  favoriteItems?: string[];
+  customizations?: Record<string, unknown>;
+}
+
 type AuthContextType = {
   user: User | null;
   session: Session | null;
@@ -11,6 +18,11 @@ type AuthContextType = {
   isDarkMode: boolean;
   setIsDarkMode: (value: boolean) => void;
   setUser: (user: User | null) => void;
+  userPreferences: UserPreferences;
+  updateUserPreferences: (preferences: Partial<UserPreferences>) => void;
+  addRecentView: (itemId: string) => void;
+  addFavoriteItem: (itemId: string) => void;
+  removeFavoriteItem: (itemId: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -21,13 +33,58 @@ const AuthContext = createContext<AuthContextType>({
   isDarkMode: false,
   setIsDarkMode: () => {},
   setUser: () => {},
+  userPreferences: {},
+  updateUserPreferences: () => {},
+  addRecentView: () => {},
+  addFavoriteItem: () => {},
+  removeFavoriteItem: () => {},
 });
+
+// Funções auxiliares para lidar com localStorage
+const saveToLocalStorage = (key: string, value: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    console.error("Erro ao salvar no localStorage:", error);
+  }
+};
+
+const getFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored ? JSON.parse(stored) : defaultValue;
+  } catch (error) {
+    console.error("Erro ao ler do localStorage:", error);
+    return defaultValue;
+  }
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [userPreferences, setUserPreferences] = useState<UserPreferences>({
+    recentViews: [],
+    favoriteItems: [],
+    customizations: {},
+  });
+
+  // Carregar preferências do usuário
+  useEffect(() => {
+    if (user) {
+      const userId = user.id;
+      const storedPreferences = getFromLocalStorage<UserPreferences>(
+        `user_preferences_${userId}`,
+        {
+          recentViews: [],
+          favoriteItems: [],
+          customizations: {},
+        }
+      );
+      setUserPreferences(storedPreferences);
+    }
+  }, [user]);
 
   useEffect(() => {
     // Check if dark mode is active in localStorage or in system preferences
@@ -51,6 +108,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Registrar última visita
+        if (session?.user) {
+          const now = new Date().toISOString();
+          const userId = session.user.id;
+          localStorage.setItem(`last_login_${userId}`, now);
+          
+          // Atualizar preferências com a última página visitada
+          const currentPath = window.location.pathname;
+          updateUserPreferences({ lastVisitedPage: currentPath });
+        }
       } catch (error) {
         console.error("Error checking session:", error);
       } finally {
@@ -69,15 +137,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    // Clean up subscription when component is unmounted
+    // Detectar mudanças de página para rastrear navegação do usuário
+    const handleRouteChange = () => {
+      if (user) {
+        const currentPath = window.location.pathname;
+        updateUserPreferences({ lastVisitedPage: currentPath });
+      }
+    };
+
+    window.addEventListener('popstate', handleRouteChange);
+
+    // Clean up subscriptions when component is unmounted
     return () => {
       subscription.unsubscribe();
+      window.removeEventListener('popstate', handleRouteChange);
     };
   }, []);
 
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      // Não limpar preferências no logout, mas poderia limpar dados sensíveis
+      // específicos aqui se necessário
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -95,6 +176,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserPreferences = (preferences: Partial<UserPreferences>) => {
+    if (!user) return;
+    
+    const updatedPreferences = {
+      ...userPreferences,
+      ...preferences
+    };
+    
+    setUserPreferences(updatedPreferences);
+    saveToLocalStorage(`user_preferences_${user.id}`, updatedPreferences);
+  };
+
+  const addRecentView = (itemId: string) => {
+    if (!user) return;
+    
+    const currentViews = userPreferences.recentViews || [];
+    // Remover duplicatas e limitar a 10 itens
+    const updatedViews = [itemId, ...currentViews.filter(id => id !== itemId)].slice(0, 10);
+    
+    updateUserPreferences({
+      recentViews: updatedViews
+    });
+  };
+
+  const addFavoriteItem = (itemId: string) => {
+    if (!user) return;
+    
+    const currentFavorites = userPreferences.favoriteItems || [];
+    if (!currentFavorites.includes(itemId)) {
+      updateUserPreferences({
+        favoriteItems: [...currentFavorites, itemId]
+      });
+    }
+  };
+
+  const removeFavoriteItem = (itemId: string) => {
+    if (!user) return;
+    
+    const currentFavorites = userPreferences.favoriteItems || [];
+    updateUserPreferences({
+      favoriteItems: currentFavorites.filter(id => id !== itemId)
+    });
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -103,7 +228,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut, 
       isDarkMode, 
       setIsDarkMode: handleSetIsDarkMode,
-      setUser
+      setUser,
+      userPreferences,
+      updateUserPreferences,
+      addRecentView,
+      addFavoriteItem,
+      removeFavoriteItem
     }}>
       {children}
     </AuthContext.Provider>
