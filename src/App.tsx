@@ -17,7 +17,6 @@ import Configuracoes from "@/pages/Configuracoes";
 import NovosProjetos from "@/pages/NovosProjetos";
 import MinhaConta from "@/pages/MinhaConta";
 import NotFound from "@/pages/NotFound";
-import { Toaster } from "@/components/ui/toaster";
 
 function App() {
   return (
@@ -41,7 +40,6 @@ function App() {
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Toaster />
       </BrowserRouter>
     </AuthProvider>
   );

@@ -11,14 +11,6 @@ type AuthContextType = {
   isDarkMode: boolean;
   setIsDarkMode: (value: boolean) => void;
   setUser: (user: User | null) => void;
-  userProfile: UserProfile | null;
-};
-
-type UserProfile = {
-  id: string;
-  name: string | null;
-  area: string;
-  role: string | null;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -29,7 +21,6 @@ const AuthContext = createContext<AuthContextType>({
   isDarkMode: false,
   setIsDarkMode: () => {},
   setUser: () => {},
-  userProfile: null,
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -37,10 +28,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    // Verificar se o modo escuro está ativo no localStorage ou nas preferências do sistema
+    // Check if dark mode is active in localStorage or in system preferences
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
@@ -54,73 +44,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Função para buscar o perfil do usuário da tabela profiles
-  const fetchUserProfile = async (userId: string) => {
-    try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error("Erro ao buscar perfil do usuário:", error);
-        return null;
-      }
-
-      return profile as UserProfile;
-    } catch (error) {
-      console.error("Erro em fetchUserProfile:", error);
-      return null;
-    }
-  };
-
   useEffect(() => {
-    // Verificar sessão atual ao carregar a página
+    // Check current session on page load
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          throw error;
-        }
-        
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
-        }
       } catch (error) {
-        console.error("Erro ao verificar sessão:", error);
+        console.error("Error checking session:", error);
       } finally {
-        // Sempre definir loading como false quando terminar
         setLoading(false);
       }
     };
     
     checkSession();
 
-    // Configurar listener para mudanças no estado de autenticação
+    // Set up listener for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
-        } else {
-          setUserProfile(null);
-        }
-        
-        // Definir loading como false após processar a mudança de estado
         setLoading(false);
       }
     );
 
-    // Limpar inscrição quando o componente for desmontado
+    // Clean up subscription when component is unmounted
     return () => {
       subscription.unsubscribe();
     };
@@ -128,13 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      setLoading(true); // Definir como carregando durante o logout
       await supabase.auth.signOut();
-      setUserProfile(null);
     } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-    } finally {
-      setLoading(false);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -150,17 +95,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSetUser = (newUser: User | null) => {
-    setUser(newUser);
-    if (newUser) {
-      fetchUserProfile(newUser.id).then(profile => {
-        setUserProfile(profile);
-      });
-    } else {
-      setUserProfile(null);
-    }
-  };
-
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -169,8 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut, 
       isDarkMode, 
       setIsDarkMode: handleSetIsDarkMode,
-      setUser: handleSetUser,
-      userProfile
+      setUser
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function Auth() {
   // State to manage which form is displayed
   const [view, setView] = useState<"login" | "signup" | "forgotPassword">("login");
-  
+
   // State for the login form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,28 +24,14 @@ export default function Auth() {
   const [signupName, setSignupName] = useState("");
   const [signupLoading, setSignupLoading] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-  const [formErrors, setFormErrors] = useState<string[]>([]);
   
   const { toast } = useToast();
   const { setUser } = useAuth();
   const navigate = useNavigate();
 
-  // Clear form errors when changing views
-  useEffect(() => {
-    setFormErrors([]);
-    setPasswordError("");
-  }, [view]);
-
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setFormErrors([]);
-    
-    if (!email) {
-      setFormErrors(["Por favor, informe seu email"]);
-      setLoading(false);
-      return;
-    }
     
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
@@ -64,7 +48,11 @@ export default function Auth() {
       setView("login");
     } catch (error: any) {
       console.error("Erro ao solicitar redefinição de senha:", error);
-      setFormErrors([error.message || "Erro ao solicitar redefinição de senha. Tente novamente mais tarde."]);
+      toast({
+        title: "Erro ao solicitar redefinição de senha",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -72,21 +60,13 @@ export default function Auth() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormErrors([]);
     
-    // Form validation
-    const errors = [];
-    
-    if (!signupName) errors.push("Nome é obrigatório");
-    if (!signupEmail) errors.push("Email é obrigatório");
-    if (!signupPassword) errors.push("Senha é obrigatória");
-    if (signupPassword !== confirmPassword) errors.push("As senhas não coincidem");
-    
-    if (errors.length > 0) {
-      setFormErrors(errors);
+    if (signupPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem");
       return;
     }
     
+    setPasswordError("");
     setSignupLoading(true);
     
     try {
@@ -96,7 +76,6 @@ export default function Auth() {
         options: {
           data: {
             full_name: signupName,
-            area: "user",
           },
         },
       });
@@ -111,7 +90,11 @@ export default function Auth() {
       setView("login");
     } catch (error: any) {
       console.error("Erro ao cadastrar:", error);
-      setFormErrors([error.message || "Erro ao cadastrar. Tente novamente mais tarde."]);
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
     } finally {
       setSignupLoading(false);
     }
@@ -119,13 +102,6 @@ export default function Auth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormErrors([]);
-    
-    if (!email || !password) {
-      setFormErrors(["Por favor, preencha todos os campos"]);
-      return;
-    }
-    
     setLoading(true);
     
     try {
@@ -147,19 +123,19 @@ export default function Auth() {
       navigate("/");
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
-      if (error.message.includes("Invalid login credentials")) {
-        setFormErrors(["Email ou senha incorretos"]);
-      } else {
-        setFormErrors([error.message || "Erro ao fazer login. Tente novamente mais tarde."]);
-      }
+      toast({
+        title: "Erro ao fazer login",
+        description: error.message || "Verifique suas credenciais e tente novamente.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen w-full bg-white dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+    <div className="flex items-center justify-center min-h-screen w-full bg-white">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-sm">
         {view === "login" && (
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold">Entrar</h1>
@@ -183,20 +159,6 @@ export default function Auth() {
               Informe seu email para redefinir sua senha
             </p>
           </div>
-        )}
-
-        {formErrors.length > 0 && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Erro</AlertTitle>
-            <AlertDescription>
-              <ul className="list-disc pl-4">
-                {formErrors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
         )}
 
         {view === "login" && (
@@ -226,8 +188,8 @@ export default function Auth() {
             <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={loading}>
               {loading ? (
                 <div className="flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Entrando...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Entrando...</span>
                 </div>
               ) : (
                 "Entrar"
@@ -292,8 +254,8 @@ export default function Auth() {
             <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={signupLoading}>
               {signupLoading ? (
                 <div className="flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Cadastrando...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Cadastrando...</span>
                 </div>
               ) : (
                 "Criar conta"
@@ -318,8 +280,8 @@ export default function Auth() {
             <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={loading}>
               {loading ? (
                 <div className="flex items-center justify-center">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Enviando...</span>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Enviando...</span>
                 </div>
               ) : (
                 "Enviar email"
