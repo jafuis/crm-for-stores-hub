@@ -28,11 +28,22 @@ export const jsonToEtapas = (json: Json | null): Etapa[] => {
   
   try {
     if (Array.isArray(json)) {
-      return json.map(etapa => ({
-        id: String(etapa.id || ''),
-        descricao: String(etapa.descricao || ''),
-        concluida: Boolean(etapa.concluida)
-      }));
+      return json.map(etapa => {
+        // Check if etapa is an object before accessing properties
+        if (etapa && typeof etapa === 'object') {
+          return {
+            id: String(etapa.id || ''),
+            descricao: String(etapa.descricao || ''),
+            concluida: Boolean(etapa.concluida)
+          };
+        }
+        // Return a default etapa if the item is not properly structured
+        return {
+          id: '',
+          descricao: '',
+          concluida: false
+        };
+      });
     }
     return [];
   } catch (error) {
