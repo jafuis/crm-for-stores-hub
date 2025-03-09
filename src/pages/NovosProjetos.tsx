@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,22 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface Etapa {
-  id: string;
-  descricao: string;
-  concluida: boolean;
-}
-
-interface Projeto {
-  id: string;
-  titulo: string;
-  descricao: string;
-  dataInicio: string;
-  dataFim: string;
-  etapas: Etapa[];
-  progresso: number;
-}
+import { Etapa, Projeto, etapasToJson, jsonToEtapas, calcularProgresso } from "@/utils/projectUtils";
 
 export default function NovosProjetos() {
   const { toast } = useToast();
@@ -95,8 +79,8 @@ export default function NovosProjetos() {
             descricao: item.descricao || "",
             dataInicio: item.data_inicio || "",
             dataFim: item.data_fim || "",
-            etapas: item.etapas || [],
-            progresso: calcularProgresso(item.etapas || [])
+            etapas: jsonToEtapas(item.etapas),
+            progresso: calcularProgresso(jsonToEtapas(item.etapas))
           }));
           
           setProjetos(projetosFormatados);
@@ -131,13 +115,6 @@ export default function NovosProjetos() {
     };
   }, [user, toast]);
 
-  // Função para calcular o progresso do projeto
-  const calcularProgresso = (etapas: Etapa[]): number => {
-    if (etapas.length === 0) return 0;
-    const etapasConcluidas = etapas.filter(etapa => etapa.concluida).length;
-    return Math.round((etapasConcluidas / etapas.length) * 100);
-  };
-
   // Adicionar ou editar projeto
   const handleAdicionarProjeto = async () => {
     if (!user) return;
@@ -154,13 +131,13 @@ export default function NovosProjetos() {
     try {
       setIsLoading(true);
       
-      // Prepare data for Supabase
+      // Prepare data for Supabase - convert Etapa[] to Json
       const projetoData = {
         titulo: novoProjeto.titulo,
         descricao: novoProjeto.descricao,
         data_inicio: novoProjeto.dataInicio,
         data_fim: novoProjeto.dataFim,
-        etapas: novoProjeto.etapas,
+        etapas: etapasToJson(novoProjeto.etapas),
         owner_id: user.id
       };
       
@@ -306,7 +283,7 @@ export default function NovosProjetos() {
       const { error } = await supabase
         .from('projects')
         .update({ 
-          etapas: etapasAtualizadas
+          etapas: etapasToJson(etapasAtualizadas)
         })
         .eq('id', projetoId);
         
