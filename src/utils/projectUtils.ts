@@ -28,20 +28,29 @@ export const jsonToEtapas = (json: Json | null): Etapa[] => {
   
   try {
     if (Array.isArray(json)) {
-      return json.map(etapa => {
-        // Check if etapa is an object before accessing properties
-        if (etapa && typeof etapa === 'object') {
+      return json.map(item => {
+        // Type guard to ensure item is an object type
+        if (item === null || typeof item !== 'object' || Array.isArray(item)) {
           return {
-            id: String(etapa.id || ''),
-            descricao: String(etapa.descricao || ''),
-            concluida: Boolean(etapa.concluida)
+            id: '',
+            descricao: '',
+            concluida: false
           };
         }
-        // Return a default etapa if the item is not properly structured
+        
+        // Now TypeScript knows item is an object, but we need to safely access properties
+        const etapaObject = item as Record<string, unknown>;
+        
         return {
-          id: '',
-          descricao: '',
-          concluida: false
+          id: typeof etapaObject.id === 'string' || typeof etapaObject.id === 'number' 
+              ? String(etapaObject.id) 
+              : '',
+          descricao: typeof etapaObject.descricao === 'string' 
+                    ? etapaObject.descricao 
+                    : '',
+          concluida: typeof etapaObject.concluida === 'boolean' 
+                     ? etapaObject.concluida 
+                     : false
         };
       });
     }
