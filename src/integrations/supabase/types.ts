@@ -45,6 +45,69 @@ export type Database = {
         }
         Relationships: []
       }
+      financas: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_vencimento: string | null
+          descricao: string
+          id: string
+          owner_id: string
+          status: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          data_vencimento?: string | null
+          descricao: string
+          id?: string
+          owner_id: string
+          status?: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_vencimento?: string | null
+          descricao?: string
+          id?: string
+          owner_id?: string
+          status?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      pedidos: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          owner_id: string
+          status: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          owner_id: string
+          status?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          owner_id?: string
+          status?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string

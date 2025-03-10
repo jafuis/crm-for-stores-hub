@@ -31,7 +31,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password: password || "markinhos", // Fallback to default password if empty
       });
 
       if (error) {

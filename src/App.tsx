@@ -1,6 +1,6 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from "@/components/ui/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from './contexts/AuthContext';
 import { AuthGuard } from './components/AuthGuard';
@@ -28,36 +28,34 @@ function App() {
   return (
     <div>
       <BrowserRouter>
-        <ThemeProvider defaultTheme="light" storageKey="theme">
-          <AuthProvider>
-            <SidebarProvider>
-              <AuthGuard>
-                <AppLayout>
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/clientes" element={<Clientes />} />
-                    <Route path="/vendas" element={<Vendas />} />
-                    <Route path="/financas" element={<Financas />} />
-                    <Route path="/pedidos" element={<Pedidos />} />
-                    <Route path="/estoque" element={<Estoque />} />
-                    <Route path="/fornecedores" element={<Fornecedores />} />
-                    <Route path="/tarefas" element={<Tarefas />} />
-                    <Route path="/aniversariantes" element={<Aniversariantes />} />
-                    <Route path="/relatorios" element={<Relatorios />} />
-                    <Route path="/novos-projetos" element={<NovosProjetos />} />
-                    <Route path="/configuracoes" element={<Configuracoes />} />
-                    <Route path="/minha-conta" element={<MinhaConta />} />
-                    <Route path="/notificacoes" element={<Notificacoes />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </AppLayout>
-              </AuthGuard>
-              <Toaster />
-            </SidebarProvider>
-          </AuthProvider>
-        </ThemeProvider>
+        <AuthProvider>
+          <SidebarProvider>
+            <AuthGuard>
+              <AppLayout>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/vendas" element={<Vendas />} />
+                  <Route path="/financas" element={<Financas />} />
+                  <Route path="/pedidos" element={<Pedidos />} />
+                  <Route path="/estoque" element={<Estoque />} />
+                  <Route path="/fornecedores" element={<Fornecedores />} />
+                  <Route path="/tarefas" element={<Tarefas />} />
+                  <Route path="/aniversariantes" element={<Aniversariantes />} />
+                  <Route path="/relatorios" element={<Relatorios />} />
+                  <Route path="/novos-projetos" element={<NovosProjetos />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                  <Route path="/minha-conta" element={<MinhaConta />} />
+                  <Route path="/notificacoes" element={<Notificacoes />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppLayout>
+            </AuthGuard>
+            <Toaster />
+          </SidebarProvider>
+        </AuthProvider>
       </BrowserRouter>
     </div>
   );

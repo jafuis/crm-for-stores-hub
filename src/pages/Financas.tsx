@@ -1,54 +1,18 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  DollarSign, 
-  Plus, 
-  Trash2, 
-  Archive, 
-  ArrowUp, 
-  ArrowDown,
-  RefreshCw,
-  AlertCircle,
-  FileText
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, Plus, Archive, Trash2, Banknote, Receipt, PiggyBank, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { formatCurrency } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { v4 as uuidv4 } from "uuid";
 
 interface Transacao {
   id: string;
@@ -59,439 +23,421 @@ interface Transacao {
   status: 'ativo' | 'arquivado';
   data_vencimento?: string;
   created_at: string;
+  owner_id: string;
 }
 
 export default function Financas() {
-  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
-  const [novaTransacao, setNovaTransacao] = useState({
-    descricao: "",
-    valor: "",
-    tipo: "receita" as 'receita' | 'despesa',
-    categoria: "variavel" as 'fixa' | 'variavel',
-    data_vencimento: ""
-  });
-  const [isLoading, setIsLoading] = useState(true);
-  const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("todas");
   const { user } = useAuth();
-  const { toast } = useToast();
+  const [transacoes, setTransacoes] = useState<Transacao[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTab, setCurrentTab] = useState("receitas");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [novaTransacao, setNovaTransacao] = useState<Partial<Transacao>>({
+    descricao: "",
+    valor: 0,
+    tipo: "receita",
+    categoria: "variavel",
+    status: "ativo",
+  });
+
+  // Estatísticas
+  const [totalReceitas, setTotalReceitas] = useState(0);
+  const [totalDespesas, setTotalDespesas] = useState(0);
+  const [saldo, setSaldo] = useState(0);
 
   useEffect(() => {
     if (user) {
-      fetchTransacoes();
+      carregarTransacoes();
     }
-  }, [user, activeTab]);
+  }, [user]);
 
-  const fetchTransacoes = async () => {
+  useEffect(() => {
+    calcularEstatisticas();
+  }, [transacoes]);
+
+  const calcularEstatisticas = () => {
+    const receitas = transacoes
+      .filter(t => t.tipo === 'receita' && t.status === 'ativo')
+      .reduce((acc, curr) => acc + Number(curr.valor), 0);
+    
+    const despesas = transacoes
+      .filter(t => t.tipo === 'despesa' && t.status === 'ativo')
+      .reduce((acc, curr) => acc + Number(curr.valor), 0);
+    
+    setTotalReceitas(receitas);
+    setTotalDespesas(despesas);
+    setSaldo(receitas - despesas);
+  };
+
+  const carregarTransacoes = async () => {
     if (!user) return;
     
     setIsLoading(true);
     try {
-      let query = supabase
-        .from("financas")
-        .select("*")
-        .eq("owner_id", user.id);
-      
-      // Aplicar filtros com base na tab ativa
-      if (activeTab === "receitas") {
-        query = query.eq("tipo", "receita").eq("status", "ativo");
-      } else if (activeTab === "despesas") {
-        query = query.eq("tipo", "despesa").eq("status", "ativo");
-      } else if (activeTab === "fixas") {
-        query = query.eq("categoria", "fixa").eq("status", "ativo");
-      } else if (activeTab === "arquivadas") {
-        query = query.eq("status", "arquivado");
-      } else {
-        // Tab "todas" - mostrar apenas itens ativos
-        query = query.eq("status", "ativo");
-      }
-      
-      const { data, error } = await query.order("created_at", { ascending: false });
-
+      const { data, error } = await supabase
+        .from('financas')
+        .select('*')
+        .eq('owner_id', user.id);
+        
       if (error) throw error;
       
-      setTransacoes(data || []);
+      setTransacoes(data as Transacao[]);
     } catch (error: any) {
-      console.error("Erro ao buscar transações:", error);
+      console.error("Erro ao carregar transações:", error.message);
       toast({
-        title: "Erro ao carregar transações",
-        description: error.message,
         variant: "destructive",
+        title: "Erro ao carregar transações",
+        description: error.message
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddTransacao = async () => {
+    if (!user) return;
     
-    if (!novaTransacao.descricao || !novaTransacao.valor || !user) {
+    if (!novaTransacao.descricao || !novaTransacao.valor) {
       toast({
-        title: "Dados incompletos",
-        description: "Preencha todos os campos obrigatórios",
         variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Preencha a descrição e o valor da transação"
       });
       return;
     }
     
+    setIsLoading(true);
     try {
       const { error } = await supabase
-        .from("financas")
+        .from('financas')
         .insert({
           descricao: novaTransacao.descricao,
-          valor: parseFloat(novaTransacao.valor),
+          valor: novaTransacao.valor,
           tipo: novaTransacao.tipo,
           categoria: novaTransacao.categoria,
-          data_vencimento: novaTransacao.data_vencimento || null,
-          owner_id: user.id,
+          status: 'ativo',
+          data_vencimento: novaTransacao.data_vencimento,
+          owner_id: user.id
         });
-
+        
       if (error) throw error;
       
       toast({
         title: "Transação adicionada",
-        description: "A transação foi registrada com sucesso!"
+        description: "A transação foi adicionada com sucesso"
       });
       
       setNovaTransacao({
         descricao: "",
-        valor: "",
-        tipo: "receita",
+        valor: 0,
+        tipo: currentTab === "receitas" ? "receita" : "despesa",
         categoria: "variavel",
-        data_vencimento: ""
+        status: "ativo",
       });
       
-      setIsOpen(false);
-      fetchTransacoes();
+      setDialogOpen(false);
+      carregarTransacoes();
     } catch (error: any) {
+      console.error("Erro ao adicionar transação:", error.message);
       toast({
-        title: "Erro ao criar transação",
-        description: error.message,
         variant: "destructive",
+        title: "Erro ao adicionar transação",
+        description: error.message
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleStatusChange = async (id: string, novoStatus: 'ativo' | 'arquivado') => {
+  const arquivarTransacao = async (id: string) => {
+    setIsLoading(true);
     try {
       const { error } = await supabase
-        .from("financas")
-        .update({ status: novoStatus })
-        .eq("id", id);
-      
+        .from('financas')
+        .update({ status: 'arquivado' })
+        .eq('id', id);
+        
       if (error) throw error;
       
       toast({
-        title: novoStatus === 'arquivado' ? "Transação arquivada" : "Transação restaurada",
-        description: `Status alterado com sucesso!`
+        title: "Transação arquivada",
+        description: "A transação foi arquivada com sucesso"
       });
       
-      fetchTransacoes();
+      carregarTransacoes();
     } catch (error: any) {
+      console.error("Erro ao arquivar transação:", error.message);
       toast({
-        title: "Erro ao atualizar status",
-        description: error.message,
         variant: "destructive",
+        title: "Erro ao arquivar transação",
+        description: error.message
       });
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleDelete = async (id: string) => {
+
+  const excluirTransacao = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+    
+    setIsLoading(true);
     try {
       const { error } = await supabase
-        .from("financas")
+        .from('financas')
         .delete()
-        .eq("id", id);
-      
+        .eq('id', id);
+        
       if (error) throw error;
       
       toast({
         title: "Transação excluída",
-        description: "A transação foi removida com sucesso!"
+        description: "A transação foi excluída com sucesso"
       });
       
-      fetchTransacoes();
+      carregarTransacoes();
     } catch (error: any) {
+      console.error("Erro ao excluir transação:", error.message);
       toast({
-        title: "Erro ao excluir transação",
-        description: error.message,
         variant: "destructive",
+        title: "Erro ao excluir transação",
+        description: error.message
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const formatarValor = (valor: number) => {
-    return valor.toLocaleString('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    });
-  };
-  
-  const formatarData = (data: string) => {
-    return format(new Date(data), "dd/MM/yyyy", { locale: ptBR });
+  // Filtrar transações baseado na aba atual
+  const filtrarTransacoes = () => {
+    let filtradas: Transacao[] = [];
+    
+    switch (currentTab) {
+      case "receitas":
+        filtradas = transacoes.filter(t => t.tipo === 'receita' && t.status === 'ativo');
+        break;
+      case "despesas":
+        filtradas = transacoes.filter(t => t.tipo === 'despesa' && t.status === 'ativo');
+        break;
+      case "fixas":
+        filtradas = transacoes.filter(t => t.categoria === 'fixa' && t.status === 'ativo');
+        break;
+      case "arquivadas":
+        filtradas = transacoes.filter(t => t.status === 'arquivado');
+        break;
+      default:
+        filtradas = transacoes;
+    }
+    
+    return filtradas;
   };
 
-  // Cálculos de totais
-  const totalReceitas = transacoes
-    .filter(t => t.tipo === 'receita' && t.status === 'ativo')
-    .reduce((acc, t) => acc + t.valor, 0);
-    
-  const totalDespesas = transacoes
-    .filter(t => t.tipo === 'despesa' && t.status === 'ativo')
-    .reduce((acc, t) => acc + t.valor, 0);
-    
-  const saldo = totalReceitas - totalDespesas;
+  const getTransacaoIcon = (tipo: string) => {
+    switch (tipo) {
+      case 'receita':
+        return <Banknote className="h-4 w-4 text-green-500" />;
+      case 'despesa':
+        return <Receipt className="h-4 w-4 text-red-500" />;
+      default:
+        return <Banknote className="h-4 w-4" />;
+    }
+  };
 
   return (
-    <div className="container mx-auto py-6 space-y-6 animate-fadeIn">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <DollarSign className="h-6 w-6" /> Finanças
-        </h1>
-        
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <div className="container mx-auto py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Finanças</h1>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="mr-2 h-4 w-4" /> Nova Transação
+              <Plus className="h-4 w-4 mr-2" /> Nova Transação
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Adicionar Nova Transação</DialogTitle>
-              <DialogDescription>
-                Preencha os dados da transação abaixo.
-              </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="descricao">Descrição</Label>
                 <Input
-                  placeholder="Descrição da transação"
+                  id="descricao"
                   value={novaTransacao.descricao}
                   onChange={(e) => setNovaTransacao({...novaTransacao, descricao: e.target.value})}
+                  placeholder="Descrição da transação"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="grid gap-2">
+                <Label htmlFor="valor">Valor (R$)</Label>
                 <Input
+                  id="valor"
                   type="number"
+                  value={novaTransacao.valor || ""}
+                  onChange={(e) => setNovaTransacao({...novaTransacao, valor: parseFloat(e.target.value)})}
+                  placeholder="0.00"
                   step="0.01"
-                  min="0"
-                  placeholder="Valor (R$)"
-                  value={novaTransacao.valor}
-                  onChange={(e) => setNovaTransacao({...novaTransacao, valor: e.target.value})}
                 />
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Select 
-                    value={novaTransacao.tipo} 
-                    onValueChange={(value: 'receita' | 'despesa') => 
-                      setNovaTransacao({...novaTransacao, tipo: value})
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Tipo de Transação</SelectLabel>
-                        <SelectItem value="receita">Receita</SelectItem>
-                        <SelectItem value="despesa">Despesa</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Select 
-                    value={novaTransacao.categoria} 
-                    onValueChange={(value: 'fixa' | 'variavel') => 
-                      setNovaTransacao({...novaTransacao, categoria: value})
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Categoria</SelectLabel>
-                        <SelectItem value="fixa">Fixa</SelectItem>
-                        <SelectItem value="variavel">Variável</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tipo">Tipo</Label>
+                <Select 
+                  value={novaTransacao.tipo} 
+                  onValueChange={(value) => setNovaTransacao({...novaTransacao, tipo: value as 'receita' | 'despesa'})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="receita">Receita</SelectItem>
+                    <SelectItem value="despesa">Despesa</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              
-              {novaTransacao.categoria === 'fixa' && (
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-500">Data de Vencimento</p>
-                  <Input
-                    type="date"
-                    value={novaTransacao.data_vencimento}
-                    onChange={(e) => setNovaTransacao({...novaTransacao, data_vencimento: e.target.value})}
-                  />
-                </div>
-              )}
-              
-              <DialogFooter>
-                <Button type="submit">Salvar Transação</Button>
-              </DialogFooter>
-            </form>
+              <div className="grid gap-2">
+                <Label htmlFor="categoria">Categoria</Label>
+                <Select 
+                  value={novaTransacao.categoria} 
+                  onValueChange={(value) => setNovaTransacao({...novaTransacao, categoria: value as 'fixa' | 'variavel'})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixa">Fixa</SelectItem>
+                    <SelectItem value="variavel">Variável</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="data_vencimento">Data de Vencimento (opcional)</Label>
+                <Input
+                  id="data_vencimento"
+                  type="date"
+                  value={novaTransacao.data_vencimento || ""}
+                  onChange={(e) => setNovaTransacao({...novaTransacao, data_vencimento: e.target.value})}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={handleAddTransacao} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
+                  </>
+                ) : (
+                  "Salvar"
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Resumo Financeiro */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-        <Card className="bg-green-50 border-green-200">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-green-700 flex items-center gap-2">
-              <ArrowUp className="h-4 w-4" /> Receitas
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-green-600">Total de Receitas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-700">{formatarValor(totalReceitas)}</p>
+            <div className="text-2xl font-bold">{formatCurrency(totalReceitas)}</div>
           </CardContent>
         </Card>
-        
-        <Card className="bg-red-50 border-red-200">
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-red-700 flex items-center gap-2">
-              <ArrowDown className="h-4 w-4" /> Despesas
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-red-600">Total de Despesas</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-red-700">{formatarValor(totalDespesas)}</p>
+            <div className="text-2xl font-bold">{formatCurrency(totalDespesas)}</div>
           </CardContent>
         </Card>
-        
-        <Card className={`${saldo >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'}`}>
+        <Card>
           <CardHeader className="pb-2">
-            <CardTitle className={`text-lg flex items-center gap-2 ${saldo >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
-              <DollarSign className="h-4 w-4" /> Saldo
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${saldo >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
-              {formatarValor(saldo)}
-            </p>
+            <div className={`text-2xl font-bold ${saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(saldo)}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs e lista de transações */}
-      <Tabs defaultValue="todas" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="todas">Todas</TabsTrigger>
-          <TabsTrigger value="receitas">Receitas</TabsTrigger>
-          <TabsTrigger value="despesas">Despesas</TabsTrigger>
-          <TabsTrigger value="fixas">Fixas</TabsTrigger>
-          <TabsTrigger value="arquivadas">Arquivadas</TabsTrigger>
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
+        <TabsList className="grid grid-cols-4 mb-4">
+          <TabsTrigger value="receitas" className="flex items-center">
+            <Banknote className="h-4 w-4 mr-2" /> Receitas
+          </TabsTrigger>
+          <TabsTrigger value="despesas" className="flex items-center">
+            <Receipt className="h-4 w-4 mr-2" /> Despesas
+          </TabsTrigger>
+          <TabsTrigger value="fixas" className="flex items-center">
+            <Calendar className="h-4 w-4 mr-2" /> Fixas
+          </TabsTrigger>
+          <TabsTrigger value="arquivadas" className="flex items-center">
+            <Archive className="h-4 w-4 mr-2" /> Arquivadas
+          </TabsTrigger>
         </TabsList>
-        
-        <TabsContent value={activeTab} className="mt-6">
-          <div className="grid gap-4">
+
+        {["receitas", "despesas", "fixas", "arquivadas"].map((tab) => (
+          <TabsContent key={tab} value={tab} className="space-y-4">
             {isLoading ? (
-              <div className="flex justify-center items-center h-40">
-                <RefreshCw className="animate-spin h-10 w-10 text-gray-400" />
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : transacoes.length > 0 ? (
-              transacoes.map((transacao) => (
-                <Card key={transacao.id} className={`
-                  ${transacao.tipo === 'receita' ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-red-500'}
-                  ${transacao.status === 'arquivado' ? 'opacity-70' : ''}
-                `}>
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-lg">{transacao.descricao}</h3>
-                          {transacao.categoria === 'fixa' && (
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
-                              Fixa
-                            </span>
+            ) : filtrarTransacoes().length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma transação encontrada.
+              </div>
+            ) : (
+              filtrarTransacoes().map((transacao) => (
+                <Card key={transacao.id} className="overflow-hidden">
+                  <div className="flex justify-between items-center p-4">
+                    <div className="flex items-center">
+                      {getTransacaoIcon(transacao.tipo)}
+                      <div className="ml-3">
+                        <h3 className="font-medium">{transacao.descricao}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(transacao.created_at).toLocaleDateString('pt-BR')}
+                          {transacao.data_vencimento && (
+                            <span> • Vence: {new Date(transacao.data_vencimento).toLocaleDateString('pt-BR')}</span>
                           )}
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          Data: {formatarData(transacao.created_at)}
+                          <span> • {transacao.categoria === 'fixa' ? 'Fixa' : 'Variável'}</span>
                         </p>
-                        {transacao.data_vencimento && (
-                          <p className="text-sm text-gray-500">
-                            Vencimento: {formatarData(transacao.data_vencimento)}
-                          </p>
-                        )}
-                        <p className={`text-lg font-bold mt-2 ${
-                          transacao.tipo === 'receita' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {transacao.tipo === 'receita' ? '+' : '-'} {formatarValor(transacao.valor)}
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {transacao.status === 'ativo' ? (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="border-gray-300 text-gray-600 hover:bg-gray-50"
-                            onClick={() => handleStatusChange(transacao.id, 'arquivado')}
-                          >
-                            <Archive className="h-4 w-4 mr-1" /> Arquivar
-                          </Button>
-                        ) : (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="border-blue-500 text-blue-600 hover:bg-blue-50"
-                            onClick={() => handleStatusChange(transacao.id, 'ativo')}
-                          >
-                            <FileText className="h-4 w-4 mr-1" /> Restaurar
-                          </Button>
-                        )}
-                        
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="border-red-500 text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" /> Excluir
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Confirmação</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tem certeza que deseja excluir esta transação? Esta ação não pode ser desfeita.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction 
-                                onClick={() => handleDelete(transacao.id)}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                Excluir
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
                       </div>
                     </div>
-                  </CardContent>
+                    <div className="flex items-center space-x-2">
+                      <span className={`font-medium ${transacao.tipo === 'receita' ? 'text-green-600' : 'text-red-600'}`}>
+                        {transacao.tipo === 'receita' ? '+' : '-'} {formatCurrency(transacao.valor)}
+                      </span>
+                      <div className="flex space-x-1">
+                        {transacao.status === 'ativo' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => arquivarTransacao(transacao.id)}
+                            title="Arquivar"
+                          >
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => excluirTransacao(transacao.id)}
+                          className="text-red-500 hover:text-red-700"
+                          title="Excluir"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </Card>
               ))
-            ) : (
-              <Card>
-                <CardContent className="p-6 flex flex-col items-center justify-center h-40">
-                  <AlertCircle className="h-10 w-10 text-gray-400 mb-4" />
-                  <p className="text-gray-500 text-center">Nenhuma transação encontrada.</p>
-                  <p className="text-gray-500 text-center">Clique em "Nova Transação" para adicionar.</p>
-                </CardContent>
-              </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
+        ))}
       </Tabs>
     </div>
   );
