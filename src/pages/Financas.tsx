@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -35,6 +36,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Financa {
   id: string;
@@ -65,26 +67,29 @@ const Financas = () => {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const { toast } = useToast();
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchFinancas();
+    if (user) {
+      fetchFinancas();
 
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('public:financas')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'financas'
-      }, () => {
-        fetchFinancas();
-      })
-      .subscribe();
+      // Set up realtime subscription
+      const channel = supabase
+        .channel('public:financas')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'financas'
+        }, () => {
+          fetchFinancas();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
 
   // Reset categoria when tipo changes
   useEffect(() => {
@@ -92,10 +97,13 @@ const Financas = () => {
   }, [tipo]);
 
   const fetchFinancas = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('financas')
         .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -115,6 +123,15 @@ const Financas = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para adicionar um registro financeiro",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!descricao || !valor || !tipo || !categoria) {
       toast({
@@ -140,18 +157,17 @@ const Financas = () => {
           })
           .eq('id', currentId);
       } else {
-        // Insert new finance
+        // Insert new finance - Make sure to include owner_id
         result = await supabase
           .from('financas')
-          .insert([
-            {
-              descricao,
-              valor: parseFloat(valor),
-              tipo,
-              categoria,
-              data_vencimento: dataVencimento || null
-            }
-          ]);
+          .insert({
+            descricao,
+            valor: parseFloat(valor),
+            tipo,
+            categoria,
+            data_vencimento: dataVencimento || null,
+            owner_id: user.id
+          });
       }
 
       if (result.error) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -33,6 +32,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Pedido {
   id: string;
@@ -56,32 +56,38 @@ const Pedidos = () => {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const { toast } = useToast();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchPedidos();
+    if (user) {
+      fetchPedidos();
 
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('public:pedidos')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'pedidos'
-      }, () => {
-        fetchPedidos();
-      })
-      .subscribe();
+      // Set up realtime subscription
+      const channel = supabase
+        .channel('public:pedidos')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'pedidos'
+        }, () => {
+          fetchPedidos();
+        })
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user]);
 
   const fetchPedidos = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('pedidos')
         .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -102,6 +108,15 @@ const Pedidos = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Você precisa estar logado para adicionar um pedido",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!cliente || !descricao || !valor || !status) {
       toast({
         title: "Erro",
@@ -118,26 +133,22 @@ const Pedidos = () => {
         result = await supabase
           .from('pedidos')
           .update({
-            descricao,
+            descricao: descricao + (cliente ? `\nCliente: ${cliente}` : ''),
             valor: parseFloat(valor),
-            status,
-            codigo_rastreio: codigoRastreio || null,
-            cliente
+            status
           })
           .eq('id', currentId);
       } else {
-        // Insert new pedido
+        // Insert new pedido with owner_id
         result = await supabase
           .from('pedidos')
-          .insert([
-            {
-              descricao,
-              valor: parseFloat(valor),
-              status,
-              codigo_rastreio: codigoRastreio || null,
-              cliente
-            }
-          ]);
+          .insert({
+            descricao: descricao + (cliente ? `\nCliente: ${cliente}` : '') + 
+                       (codigoRastreio ? `\nCódigo de Rastreio: ${codigoRastreio}` : ''),
+            valor: parseFloat(valor),
+            status,
+            owner_id: user.id
+          });
       }
 
       if (result.error) {
@@ -171,11 +182,15 @@ const Pedidos = () => {
   };
 
   const handleEdit = (pedido: Pedido) => {
-    setCliente(pedido.cliente || "");
-    setDescricao(pedido.descricao);
+    const clienteExtraido = parseClienteFromDescricao(pedido.descricao);
+    const codigoRastreioExtraido = parseCodigoRastreioFromDescricao(pedido.descricao);
+    const descricaoLimpa = extractDescricaoWithoutMetadata(pedido.descricao);
+    
+    setCliente(clienteExtraido);
+    setDescricao(descricaoLimpa);
     setValor(pedido.valor.toString());
     setStatus(pedido.status);
-    setCodigoRastreio(pedido.codigo_rastreio || "");
+    setCodigoRastreio(codigoRastreioExtraido);
     setIsEditing(true);
     setCurrentId(pedido.id);
     setDialogOpen(true);
@@ -278,6 +293,23 @@ const Pedidos = () => {
     setDialogOpen(true);
   };
 
+  const parseClienteFromDescricao = (descricao: string): string => {
+    const match = descricao.match(/Cliente: (.+?)(\n|$)/);
+    return match ? match[1] : "";
+  };
+
+  const parseCodigoRastreioFromDescricao = (descricao: string): string => {
+    const match = descricao.match(/Código de Rastreio: (.+?)(\n|$)/);
+    return match ? match[1] : "";
+  };
+
+  const extractDescricaoWithoutMetadata = (descricao: string): string => {
+    return descricao
+      .replace(/Cliente: .+?(\n|$)/, '')
+      .replace(/Código de Rastreio: .+?(\n|$)/, '')
+      .trim();
+  };
+
   return (
     <div className="container mx-auto py-6">
       <div className="flex justify-between items-center mb-6">
@@ -304,72 +336,78 @@ const Pedidos = () => {
       </div>
 
       <Accordion type="single" collapsible className="w-full">
-        {getFilteredPedidos().map((pedido) => (
-          <AccordionItem key={pedido.id} value={pedido.id}>
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-gray-500" />
-                  <span className="font-medium">
-                    {pedido.cliente ? `${pedido.cliente} - ` : ""} 
-                    R$ {pedido.valor.toFixed(2)}
-                  </span>
+        {getFilteredPedidos().map((pedido) => {
+          const cliente = parseClienteFromDescricao(pedido.descricao);
+          const codigoRastreio = parseCodigoRastreioFromDescricao(pedido.descricao);
+          const descricaoLimpa = extractDescricaoWithoutMetadata(pedido.descricao);
+          
+          return (
+            <AccordionItem key={pedido.id} value={pedido.id}>
+              <AccordionTrigger className="px-4 hover:no-underline">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Package className="w-5 h-5 text-gray-500" />
+                    <span className="font-medium">
+                      {cliente ? `${cliente} - ` : ""} 
+                      R$ {pedido.valor.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className={`capitalize font-semibold ${getStatusClass(pedido.status)}`}>
+                      {pedido.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <span className={`capitalize font-semibold ${getStatusClass(pedido.status)}`}>
-                    {pedido.status}
-                  </span>
-                </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Descrição</h4>
-                  <p className="mt-1 whitespace-pre-line">{pedido.descricao}</p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4">
+                <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Data do pedido</h4>
-                    <p>{formatDate(pedido.created_at)}</p>
+                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Descrição</h4>
+                    <p className="mt-1 whitespace-pre-line">{descricaoLimpa}</p>
                   </div>
                   
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Código de rastreio</h4>
-                    {pedido.codigo_rastreio ? (
-                      <div className="flex items-center">
-                        <span>{pedido.codigo_rastreio}</span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="ml-2" 
-                          onClick={() => rastrearEncomenda(pedido.codigo_rastreio || "")}
-                        >
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-400">Não informado</span>
-                    )}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Data do pedido</h4>
+                      <p>{formatDate(pedido.created_at)}</p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400">Código de rastreio</h4>
+                      {codigoRastreio ? (
+                        <div className="flex items-center">
+                          <span>{codigoRastreio}</span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="ml-2" 
+                            onClick={() => rastrearEncomenda(codigoRastreio)}
+                          >
+                            <Search className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">Não informado</span>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(pedido)}>
+                      <Edit className="h-4 w-4 mr-1" /> Editar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)}>
+                      <Archive className="h-4 w-4 mr-1" /> Arquivar
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(pedido.id)}>
+                      <Trash className="h-4 w-4 mr-1" /> Excluir
+                    </Button>
                   </div>
                 </div>
-                
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(pedido)}>
-                    <Edit className="h-4 w-4 mr-1" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)}>
-                    <Archive className="h-4 w-4 mr-1" /> Arquivar
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(pedido.id)}>
-                    <Trash className="h-4 w-4 mr-1" /> Excluir
-                  </Button>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
       </Accordion>
 
       {getFilteredPedidos().length === 0 && (
