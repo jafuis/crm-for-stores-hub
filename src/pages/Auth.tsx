@@ -10,18 +10,21 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
 export default function Auth() {
-  const [email, setEmail] = useState("marcos.rherculano@gmail.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registerEmail, setRegisterEmail] = useState("");
+  const [registerPassword, setRegisterPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email !== "marcos.rherculano@gmail.com") {
+    if (!email || !password) {
       toast({
-        title: "Acesso restrito",
-        description: "Apenas o administrador tem acesso ao sistema.",
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
         variant: "destructive",
       });
       return;
@@ -31,7 +34,7 @@ export default function Auth() {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
-        password: password || "markinhos", // Fallback to default password if empty
+        password,
       });
 
       if (error) {
@@ -62,19 +65,59 @@ export default function Auth() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registerEmail || !registerPassword) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: registerEmail,
+        password: registerPassword,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Registro realizado com sucesso",
+        description: "Verifique seu email para confirmar sua conta.",
+      });
+      
+      setActiveTab("login");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao criar conta",
+        description: error.message || "Ocorreu um erro ao criar sua conta. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
       <Card className="mx-auto w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl">CRM para Lojas</CardTitle>
           <CardDescription>
-            Entre com suas credenciais para acessar o sistema
+            Entre com suas credenciais ou crie uma nova conta
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-1">
+          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Registrar</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4 mt-4">
@@ -85,7 +128,6 @@ export default function Auth() {
                     placeholder="Seu e-mail"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    disabled={true}
                   />
                 </div>
                 <div className="space-y-2">
@@ -108,6 +150,41 @@ export default function Auth() {
                     </>
                   ) : (
                     "Entrar"
+                  )}
+                </Button>
+              </form>
+            </TabsContent>
+            <TabsContent value="register">
+              <form onSubmit={handleRegister} className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="Seu e-mail"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    id="register-password"
+                    type="password"
+                    placeholder="Sua senha"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+                    </>
+                  ) : (
+                    "Criar Conta"
                   )}
                 </Button>
               </form>

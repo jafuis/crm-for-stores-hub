@@ -10,7 +10,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
 
 interface Pedido {
   id: string;
@@ -63,14 +62,29 @@ export default function Pedidos() {
     }
   };
 
+  const validarPedido = () => {
+    const erros = [];
+    
+    if (!novoPedido.descricao || novoPedido.descricao.trim() === '') {
+      erros.push("Descrição é obrigatória");
+    }
+    
+    if (!novoPedido.valor || novoPedido.valor <= 0) {
+      erros.push("Valor deve ser maior que zero");
+    }
+    
+    return erros;
+  };
+
   const handleAddPedido = async () => {
     if (!user) return;
     
-    if (!novoPedido.descricao || !novoPedido.valor) {
+    const erros = validarPedido();
+    if (erros.length > 0) {
       toast({
         variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Preencha a descrição e o valor do pedido"
+        title: "Campos inválidos",
+        description: erros.join(', ')
       });
       return;
     }
@@ -174,7 +188,7 @@ export default function Pedidos() {
   };
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-8 mt-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Pedidos</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -206,6 +220,7 @@ export default function Pedidos() {
                   onChange={(e) => setNovoPedido({...novoPedido, valor: parseFloat(e.target.value)})}
                   placeholder="0.00"
                   step="0.01"
+                  min="0.01"
                 />
               </div>
             </div>
