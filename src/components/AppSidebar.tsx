@@ -15,7 +15,8 @@ import {
   Lightbulb,
   User,
   Calendar,
-  Mail
+  Mail,
+  DollarSign
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +62,8 @@ const menuItems = [
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
+  { title: "Finanças", icon: DollarSign, path: "/financas" },
+  { title: "Pedidos", icon: Package, path: "/pedidos" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
@@ -163,19 +166,28 @@ export function AppSidebar() {
       if (clientesSalvos) {
         const clientes = JSON.parse(clientesSalvos);
         const hoje = new Date();
+        
+        // Filter to find today's birthdays
         const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
           if (!cliente.aniversario) return false;
+          
           try {
             const aniversario = parseISO(cliente.aniversario);
-            return isValid(aniversario) && isSameDay(
-              new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()),
-              new Date(hoje.getFullYear(), aniversario.getMonth(), aniversario.getDate())
+            if (!isValid(aniversario)) return false;
+            
+            // Check if month and day match today's date (ignore year)
+            return (
+              aniversario.getDate() === hoje.getDate() && 
+              aniversario.getMonth() === hoje.getMonth()
             );
           } catch (error) {
+            console.error("Erro ao processar aniversário:", error);
             return false;
           }
         });
+        
         setAniversariantes(aniversariantesHoje);
+        console.log("Aniversariantes hoje:", aniversariantesHoje.length);
       } else {
         setAniversariantes([]);
       }

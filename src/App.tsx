@@ -17,6 +17,8 @@ import Configuracoes from "@/pages/Configuracoes";
 import NovosProjetos from "@/pages/NovosProjetos";
 import MinhaConta from "@/pages/MinhaConta";
 import NotFound from "@/pages/NotFound";
+import Financas from "@/pages/Financas";
+import Pedidos from "@/pages/Pedidos";
 
 function App() {
   return (
@@ -37,6 +39,8 @@ function App() {
             <Route path="/novos-projetos" element={<NovosProjetos />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="/minha-conta" element={<MinhaConta />} />
+            <Route path="/financas" element={<Financas />} />
+            <Route path="/pedidos" element={<Pedidos />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
