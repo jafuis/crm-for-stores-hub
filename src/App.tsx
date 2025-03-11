@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from "@/components/ui/toaster"
@@ -31,27 +30,25 @@ function App() {
         <AuthProvider>
           <SidebarProvider>
             <AuthGuard>
-              <AppLayout>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/clientes" element={<Clientes />} />
-                  <Route path="/vendas" element={<Vendas />} />
-                  <Route path="/financas" element={<Financas />} />
-                  <Route path="/pedidos" element={<Pedidos />} />
-                  <Route path="/estoque" element={<Estoque />} />
-                  <Route path="/fornecedores" element={<Fornecedores />} />
-                  <Route path="/tarefas" element={<Tarefas />} />
-                  <Route path="/aniversariantes" element={<Aniversariantes />} />
-                  <Route path="/relatorios" element={<Relatorios />} />
-                  <Route path="/novos-projetos" element={<NovosProjetos />} />
-                  <Route path="/configuracoes" element={<Configuracoes />} />
-                  <Route path="/minha-conta" element={<MinhaConta />} />
-                  <Route path="/notificacoes" element={<Notificacoes />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppLayout>
+              <Routes>
+                <Route path="/" element={<AppLayout><Index /></AppLayout>} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+                <Route path="/clientes" element={<AppLayout><Clientes /></AppLayout>} />
+                <Route path="/vendas" element={<AppLayout><Vendas /></AppLayout>} />
+                <Route path="/financas" element={<AppLayout><Financas /></AppLayout>} />
+                <Route path="/pedidos" element={<AppLayout><Pedidos /></AppLayout>} />
+                <Route path="/estoque" element={<AppLayout><Estoque /></AppLayout>} />
+                <Route path="/fornecedores" element={<AppLayout><Fornecedores /></AppLayout>} />
+                <Route path="/tarefas" element={<AppLayout><Tarefas /></AppLayout>} />
+                <Route path="/aniversariantes" element={<AppLayout><Aniversariantes /></AppLayout>} />
+                <Route path="/relatorios" element={<AppLayout><Relatorios /></AppLayout>} />
+                <Route path="/novos-projetos" element={<AppLayout><NovosProjetos /></AppLayout>} />
+                <Route path="/configuracoes" element={<AppLayout><Configuracoes /></AppLayout>} />
+                <Route path="/minha-conta" element={<AppLayout><MinhaConta /></AppLayout>} />
+                <Route path="/notificacoes" element={<AppLayout><Notificacoes /></AppLayout>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </AuthGuard>
             <Toaster />
           </SidebarProvider>
