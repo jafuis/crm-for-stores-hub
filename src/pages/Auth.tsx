@@ -12,8 +12,10 @@ import { useNavigate } from "react-router-dom";
 export default function Auth() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [registerName, setRegisterName] = useState("");
   const [registerEmail, setRegisterEmail] = useState("");
   const [registerPassword, setRegisterPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("login");
   const navigate = useNavigate();
@@ -67,7 +69,7 @@ export default function Auth() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registerEmail || !registerPassword) {
+    if (!registerName || !registerEmail || !registerPassword || !confirmPassword) {
       toast({
         title: "Campos obrigatórios",
         description: "Por favor, preencha todos os campos.",
@@ -76,23 +78,49 @@ export default function Auth() {
       return;
     }
 
+    if (registerPassword !== confirmPassword) {
+      toast({
+        title: "Senhas não conferem",
+        description: "A senha e a confirmação de senha devem ser iguais.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      // Registrar sem verificação de email
+      const { data, error } = await supabase.auth.signUp({
         email: registerEmail,
         password: registerPassword,
+        options: {
+          data: {
+            full_name: registerName,
+          },
+          emailRedirectTo: window.location.origin,
+        }
       });
 
       if (error) {
         throw error;
       }
 
+      // Fazer login automaticamente após o registro
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: registerEmail,
+        password: registerPassword,
+      });
+
+      if (signInError) {
+        throw signInError;
+      }
+
       toast({
         title: "Registro realizado com sucesso",
-        description: "Verifique seu email para confirmar sua conta.",
+        description: "Bem-vindo ao sistema!",
       });
       
-      setActiveTab("login");
+      navigate("/");
     } catch (error: any) {
       toast({
         title: "Erro ao criar conta",
@@ -158,6 +186,15 @@ export default function Auth() {
               <form onSubmit={handleRegister} className="space-y-4 mt-4">
                 <div className="space-y-2">
                   <Input
+                    id="register-name"
+                    type="text"
+                    placeholder="Seu nome completo"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
                     id="register-email"
                     type="email"
                     placeholder="Seu e-mail"
@@ -172,6 +209,15 @@ export default function Auth() {
                     placeholder="Sua senha"
                     value={registerPassword}
                     onChange={(e) => setRegisterPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirme sua senha"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                   />
                 </div>
                 <Button

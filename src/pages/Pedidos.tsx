@@ -4,12 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Plus, Check, Trash2 } from "lucide-react";
+import { Loader2, Plus, Check, Trash2, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { formatCurrency } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 interface Pedido {
   id: string;
@@ -188,7 +190,7 @@ export default function Pedidos() {
   };
 
   return (
-    <div className="container mx-auto py-8 mt-8">
+    <div className="container mx-auto py-16 mt-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Pedidos</h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -204,11 +206,13 @@ export default function Pedidos() {
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="descricao">Descrição</Label>
-                <Input
+                <Textarea
                   id="descricao"
                   value={novoPedido.descricao}
                   onChange={(e) => setNovoPedido({...novoPedido, descricao: e.target.value})}
-                  placeholder="Descrição do pedido"
+                  placeholder="Descrição detalhada do pedido"
+                  className="min-h-[120px]"
+                  rows={4}
                 />
               </div>
               <div className="grid gap-2">
@@ -249,53 +253,57 @@ export default function Pedidos() {
             Nenhum pedido encontrado. Adicione seu primeiro pedido clicando no botão acima.
           </div>
         ) : (
-          pedidos.map((pedido) => (
-            <Card key={pedido.id} className={`overflow-hidden ${pedido.status === 'concluido' ? 'bg-gray-50' : ''}`}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className={`font-medium ${pedido.status === 'concluido' ? 'line-through text-gray-500' : ''}`}>
-                      {pedido.descricao}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(pedido.created_at).toLocaleDateString('pt-BR')}
-                      {' • '}
-                      <span className={`${pedido.status === 'pendente' ? 'text-yellow-500' : 'text-green-500'}`}>
+          <Accordion type="single" collapsible className="w-full">
+            {pedidos.map((pedido) => (
+              <AccordionItem key={pedido.id} value={pedido.id} className={`${pedido.status === 'concluido' ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}>
+                <AccordionTrigger className="px-4 py-2 hover:no-underline">
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center">
+                      <h3 className={`font-medium mr-2 ${pedido.status === 'concluido' ? 'line-through text-gray-500' : ''}`}>
+                        {pedido.descricao.length > 50 
+                          ? `${pedido.descricao.substring(0, 50)}...` 
+                          : pedido.descricao}
+                      </h3>
+                      <span className={`text-sm px-2 py-1 rounded-full ${pedido.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
                         {pedido.status === 'pendente' ? 'Pendente' : 'Concluído'}
                       </span>
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-2">
+                    </div>
                     <span className="font-medium">
                       {formatCurrency(pedido.valor)}
                     </span>
-                    <div className="flex space-x-1">
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      Data: {new Date(pedido.created_at).toLocaleDateString('pt-BR')}
+                    </div>
+                    <p className="whitespace-pre-wrap">{pedido.descricao}</p>
+                    <div className="flex justify-end space-x-2 mt-4">
                       {pedido.status === 'pendente' && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => concluirPedido(pedido.id)}
-                          title="Marcar como concluído"
-                          className="text-green-500 hover:text-green-700"
+                          className="text-green-500 border-green-500 hover:bg-green-50 hover:text-green-600"
                         >
-                          <Check className="h-4 w-4" />
+                          <Check className="h-4 w-4 mr-2" /> Concluir
                         </Button>
                       )}
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => excluirPedido(pedido.id)}
-                        className="text-red-500 hover:text-red-700"
-                        title="Excluir"
+                        className="text-red-500 border-red-500 hover:bg-red-50 hover:text-red-600"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-2" /> Excluir
                       </Button>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         )}
       </div>
     </div>
