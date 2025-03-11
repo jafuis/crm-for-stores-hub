@@ -9,11 +9,13 @@ import {
   Home,
   Menu,
   Gift,
+  MessageSquare,
+  PartyPopper,
   FileText,
   Lightbulb,
   User,
-  DollarSign,
-  ShoppingBag
+  Calendar,
+  Mail
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,8 +58,6 @@ const menuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Clientes", icon: Users, path: "/clientes" },
   { title: "Vendas", icon: ShoppingCart, path: "/vendas" },
-  { title: "Finanças", icon: DollarSign, path: "/financas" },
-  { title: "Pedidos", icon: ShoppingBag, path: "/pedidos" },
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },

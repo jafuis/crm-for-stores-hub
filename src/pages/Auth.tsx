@@ -1,243 +1,313 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Auth() {
+  // State to manage which form is displayed
+  const [view, setView] = useState<"login" | "signup" | "forgotPassword">("login");
+
+  // State for the login form
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [registerName, setRegisterName] = useState("");
-  const [registerEmail, setRegisterEmail] = useState("");
-  const [registerPassword, setRegisterPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  
+  // State for the signup form
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
-  const navigate = useNavigate();
+  const [signupName, setSignupName] = useState("");
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  
   const { toast } = useToast();
+  const { setUser } = useAuth();
+  const navigate = useNavigate();
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/redefinir-senha`,
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+      
+      setView("login");
+    } catch (error: any) {
+      console.error("Erro ao solicitar redefinição de senha:", error);
+      toast({
+        title: "Erro ao solicitar redefinição de senha",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (signupPassword !== confirmPassword) {
+      setPasswordError("As senhas não coincidem");
+      return;
+    }
+    
+    setPasswordError("");
+    setSignupLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: signupEmail,
+        password: signupPassword,
+        options: {
+          data: {
+            full_name: signupName,
+          },
+        },
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Cadastro bem-sucedido",
+        description: "Verifique seu email para confirmar seu cadastro.",
+      });
+      
+      setView("login");
+    } catch (error: any) {
+      console.error("Erro ao cadastrar:", error);
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setSignupLoading(false);
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
+    setLoading(true);
+    
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      if (error) {
-        throw error;
-      }
-
+      
+      if (error) throw error;
+      
+      // Set user in context
+      setUser(data.user);
+      
       toast({
-        title: "Login realizado com sucesso",
-        description: "Bem-vindo de volta!",
+        title: "Login bem-sucedido",
+        description: "Bem-vindo de volta ao sistema!",
       });
-
-      // Verificar se há uma rota de redirecionamento salva
-      const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        sessionStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
-      } else {
-        navigate("/");
-      }
+      
+      navigate("/");
     } catch (error: any) {
+      console.error("Erro ao fazer login:", error);
       toast({
         title: "Erro ao fazer login",
         description: error.message || "Verifique suas credenciais e tente novamente.",
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!registerName || !registerEmail || !registerPassword || !confirmPassword) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Por favor, preencha todos os campos.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (registerPassword !== confirmPassword) {
-      toast({
-        title: "Senhas não conferem",
-        description: "A senha e a confirmação de senha devem ser iguais.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Registrar sem verificação de email
-      const { data, error } = await supabase.auth.signUp({
-        email: registerEmail,
-        password: registerPassword,
-        options: {
-          data: {
-            full_name: registerName,
-          },
-          emailRedirectTo: window.location.origin,
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      // Fazer login automaticamente após o registro
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: registerEmail,
-        password: registerPassword,
-      });
-
-      if (signInError) {
-        throw signInError;
-      }
-
-      toast({
-        title: "Registro realizado com sucesso",
-        description: "Bem-vindo ao sistema!",
-      });
-      
-      navigate("/");
-    } catch (error: any) {
-      toast({
-        title: "Erro ao criar conta",
-        description: error.message || "Ocorreu um erro ao criar sua conta. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-      <Card className="mx-auto w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">CRM para Lojas</CardTitle>
-          <CardDescription>
-            Entre com suas credenciais ou crie uma nova conta
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Registrar</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Seu e-mail"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
+    <div className="flex items-center justify-center min-h-screen w-full bg-white">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-sm">
+        {view === "login" && (
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold">Entrar</h1>
+            <p className="text-sm text-muted-foreground">
+              Entre com suas credenciais para acessar o sistema
+            </p>
+          </div>
+        )}
+        {view === "signup" && (
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold">Criar conta</h1>
+            <p className="text-sm text-muted-foreground">
+              Crie uma nova conta para começar a usar o sistema
+            </p>
+          </div>
+        )}
+        {view === "forgotPassword" && (
+          <div className="flex flex-col space-y-2 text-center">
+            <h1 className="text-2xl font-semibold">Esqueceu sua senha?</h1>
+            <p className="text-sm text-muted-foreground">
+              Informe seu email para redefinir sua senha
+            </p>
+          </div>
+        )}
+
+        {view === "login" && (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="******"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={loading}>
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Entrando...</span>
                 </div>
-                <div className="space-y-2">
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Sua senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+              ) : (
+                "Entrar"
+              )}
+            </Button>
+            
+            <Button variant="link" className="p-0 h-auto w-full mt-2" onClick={() => setView("forgotPassword")}>
+              Esqueceu a senha?
+            </Button>
+          </form>
+        )}
+
+        {view === "signup" && (
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="signupName">Nome Completo</Label>
+              <Input
+                id="signupName"
+                type="text"
+                placeholder="Seu nome completo"
+                value={signupName}
+                onChange={(e) => setSignupName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signupEmail">Email</Label>
+              <Input
+                id="signupEmail"
+                type="email"
+                placeholder="seu@email.com"
+                value={signupEmail}
+                onChange={(e) => setSignupEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signupPassword">Senha</Label>
+              <Input
+                id="signupPassword"
+                type="password"
+                placeholder="******"
+                value={signupPassword}
+                onChange={(e) => setSignupPassword(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Senha</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="******"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              {passwordError && (
+                <p className="text-sm text-red-500">{passwordError}</p>
+              )}
+            </div>
+            <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={signupLoading}>
+              {signupLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Cadastrando...</span>
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
-                    </>
-                  ) : (
-                    "Entrar"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Input
-                    id="register-name"
-                    type="text"
-                    placeholder="Seu nome completo"
-                    value={registerName}
-                    onChange={(e) => setRegisterName(e.target.value)}
-                  />
+              ) : (
+                "Criar conta"
+              )}
+            </Button>
+          </form>
+        )}
+
+        {view === "forgotPassword" && (
+          <form onSubmit={handleForgotPassword} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full bg-[#9b87f5] hover:bg-[#7e69ab]" disabled={loading}>
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="ml-2">Enviando...</span>
                 </div>
-                <div className="space-y-2">
-                  <Input
-                    id="register-email"
-                    type="email"
-                    placeholder="Seu e-mail"
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    id="register-password"
-                    type="password"
-                    placeholder="Sua senha"
-                    value={registerPassword}
-                    onChange={(e) => setRegisterPassword(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    placeholder="Confirme sua senha"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
-                    </>
-                  ) : (
-                    "Criar Conta"
-                  )}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              ) : (
+                "Enviar email"
+              )}
+            </Button>
+          </form>
+        )}
+
+        <div className="flex flex-col space-y-2 text-center">
+          {view === "login" && (
+            <Button variant="link" className="p-0 h-auto" onClick={() => setView("signup")}>
+              Não tem uma conta? Crie uma
+            </Button>
+          )}
+          {view === "signup" && (
+            <Button variant="link" className="p-0 h-auto" onClick={() => setView("login")}>
+              Já tem uma conta? Entrar
+            </Button>
+          )}
+          {view === "forgotPassword" && (
+            <Button variant="link" className="p-0 h-auto" onClick={() => setView("login")}>
+              Voltar para login
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
