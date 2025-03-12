@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -15,7 +16,8 @@ import {
   User,
   Calendar,
   Mail,
-  DollarSign
+  DollarSign,
+  Cake
 } from "lucide-react";
 import {
   Sidebar,
@@ -68,6 +70,7 @@ const menuItems = [
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
   { title: "Minha Conta", icon: User, path: "/minha-conta" },
+  { title: "Aniversários", icon: Cake, path: "/aniversarios" },
 ];
 
 export function AppSidebar() {
@@ -178,7 +181,9 @@ export function AppSidebar() {
         setAniversariantes(aniversariantesHoje);
         console.log("Aniversariantes hoje:", aniversariantesHoje.length);
         
-        if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
+        if (aniversariantesHoje.length > 0 && 
+            location.pathname !== "/aniversariantes" &&
+            location.pathname !== "/aniversarios") {
           toast({
             title: "Aniversariantes hoje!",
             description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
@@ -221,19 +226,26 @@ export function AppSidebar() {
                   className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
                 >
                   <div className="relative">
-                    {item.title === "Aniversariantes" ? (
+                    {item.title === "Aniversariantes" || item.title === "Aniversários" ? (
                       <div className={`${hasActiveBirthdays ? 'animate-pulse' : ''}`}>
-                        <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
+                        <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
                       </div>
                     ) : item.title === "Tarefas" ? (
                       <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
-                        <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
+                        <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
                       </div>
                     ) : (
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
                     
                     {(item.path === "/aniversariantes" && hasActiveBirthdays) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                      </>
+                    )}
+
+                    {(item.path === "/aniversarios" && hasActiveBirthdays) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
@@ -247,11 +259,11 @@ export function AppSidebar() {
                       </>
                     )}
                   </div>
-                  <span className={`${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
+                  <span className={`${(item.title === "Aniversariantes" || item.title === "Aniversários") && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
                     {item.title}
                   </span>
                   
-                  {item.title === "Aniversariantes" && hasActiveBirthdays && (
+                  {(item.title === "Aniversariantes" || item.title === "Aniversários") && hasActiveBirthdays && (
                     <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                       {aniversariantes.length}
                     </div>
