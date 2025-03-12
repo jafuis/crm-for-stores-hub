@@ -31,7 +31,9 @@ import {
   Trash, 
   Archive, 
   Edit,
-  Plus 
+  Plus,
+  ShoppingBag,
+  Users
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -68,10 +70,18 @@ const Financas = () => {
   const { toast } = useToast();
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const { user } = useAuth();
+  
+  // Dashboard stats
+  const [totalReceitas, setTotalReceitas] = useState(0);
+  const [totalDespesas, setTotalDespesas] = useState(0);
+  const [totalFixas, setTotalFixas] = useState(0);
+  const [vendasMes, setVendasMes] = useState(0);
+  const [totalClientes, setTotalClientes] = useState(0);
 
   useEffect(() => {
     if (user) {
       fetchFinancas();
+      fetchDashboardData();
 
       // Set up realtime subscription
       const channel = supabase
@@ -82,6 +92,7 @@ const Financas = () => {
           table: 'financas'
         }, () => {
           fetchFinancas();
+          fetchDashboardData();
         })
         .subscribe();
 
@@ -121,6 +132,59 @@ const Financas = () => {
     }
   };
 
+  const fetchDashboardData = async () => {
+    if (!user) return;
+    
+    try {
+      // Fetch financas for dashboard
+      const { data: financasData, error: financasError } = await supabase
+        .from('financas')
+        .select('*')
+        .eq('owner_id', user.id);
+
+      if (financasError) throw financasError;
+
+      // Calculate totals
+      let receitas = 0;
+      let despesas = 0;
+      let fixas = 0;
+      let vendas = 0;
+
+      financasData?.forEach(item => {
+        if (item.tipo === 'receita') {
+          receitas += item.valor;
+          if (item.categoria === 'Vendas') {
+            // Check if it's from the current month
+            const itemDate = new Date(item.created_at);
+            const currentDate = new Date();
+            if (itemDate.getMonth() === currentDate.getMonth() && 
+                itemDate.getFullYear() === currentDate.getFullYear()) {
+              vendas += item.valor;
+            }
+          }
+        } else if (item.tipo === 'despesa') {
+          despesas += item.valor;
+        } else if (item.tipo === 'fixa') {
+          fixas += item.valor;
+        }
+      });
+
+      setTotalReceitas(receitas);
+      setTotalDespesas(despesas);
+      setTotalFixas(fixas);
+      setVendasMes(vendas);
+
+      // Fetch clients count
+      const clientesString = localStorage.getItem('clientes');
+      if (clientesString) {
+        const clientes = JSON.parse(clientesString);
+        setTotalClientes(clientes.length);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar dados do dashboard:", error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -153,7 +217,8 @@ const Financas = () => {
             valor: parseFloat(valor),
             tipo,
             categoria,
-            data_vencimento: dataVencimento || null
+            data_vencimento: dataVencimento || null,
+            owner_id: user.id
           })
           .eq('id', currentId);
       } else {
@@ -190,6 +255,7 @@ const Financas = () => {
       });
 
       await fetchFinancas();
+      await fetchDashboardData();
     } catch (error) {
       console.error("Erro ao salvar finança:", error);
       toast({
@@ -228,6 +294,7 @@ const Financas = () => {
       });
 
       await fetchFinancas();
+      await fetchDashboardData();
     } catch (error) {
       console.error("Erro ao arquivar finança:", error);
       toast({
@@ -255,6 +322,7 @@ const Financas = () => {
       });
 
       await fetchFinancas();
+      await fetchDashboardData();
     } catch (error) {
       console.error("Erro ao excluir finança:", error);
       toast({
@@ -275,6 +343,13 @@ const Financas = () => {
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
     return format(parseISO(dateString), "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   const getTipoIcon = (tipo: string) => {
@@ -316,16 +391,79 @@ const Financas = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         <h1 className="text-2xl font-bold">Gestão Financeira</h1>
-        <Button onClick={handleAddNew}>
+        <Button onClick={handleAddNew} className="w-full md:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Novo lançamento
         </Button>
       </div>
 
+      {/* Dashboard Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-green-600 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Receitas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(totalReceitas)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-red-600 flex items-center gap-2">
+              <TrendingDown className="h-5 w-5" />
+              Despesas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(totalDespesas)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-blue-600 flex items-center gap-2">
+              <Wallet className="h-5 w-5" />
+              Custos Fixos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(totalFixas)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-orange-600 flex items-center gap-2">
+              <ShoppingBag className="h-5 w-5" />
+              Vendas do Mês
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{formatCurrency(vendasMes)}</p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg text-purple-600 flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Total de Clientes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{totalClientes}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="mb-6">
         <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
           <SelectContent>
@@ -348,7 +486,7 @@ const Financas = () => {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className={`font-semibold ${getStatusClass(financa.tipo)}`}>
-                    R$ {financa.valor.toFixed(2)}
+                    {formatCurrency(financa.valor)}
                   </span>
                 </div>
               </div>
@@ -373,14 +511,14 @@ const Financas = () => {
                     <p>{financa.data_vencimento ? formatDate(financa.data_vencimento) : "N/A"}</p>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(financa)}>
+                <div className="flex flex-col md:flex-row md:justify-end gap-2 mt-4">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(financa)} className="w-full md:w-auto">
                     <Edit className="h-4 w-4 mr-1" /> Editar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleArchive(financa.id)}>
+                  <Button variant="outline" size="sm" onClick={() => handleArchive(financa.id)} className="w-full md:w-auto">
                     <Archive className="h-4 w-4 mr-1" /> Arquivar
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)}>
+                  <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
                     <Trash className="h-4 w-4 mr-1" /> Excluir
                   </Button>
                 </div>

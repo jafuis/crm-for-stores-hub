@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { 
   Card, 
@@ -133,9 +134,11 @@ const Pedidos = () => {
         result = await supabase
           .from('pedidos')
           .update({
-            descricao: descricao + (cliente ? `\nCliente: ${cliente}` : ''),
+            descricao: descricao + (cliente ? `\nCliente: ${cliente}` : '') + 
+                      (codigoRastreio ? `\nCódigo de Rastreio: ${codigoRastreio}` : ''),
             valor: parseFloat(valor),
-            status
+            status,
+            owner_id: user.id
           })
           .eq('id', currentId);
       } else {
@@ -312,16 +315,16 @@ const Pedidos = () => {
 
   return (
     <div className="container mx-auto py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col gap-4 mb-6">
         <h1 className="text-2xl font-bold">Gerenciamento de Pedidos</h1>
-        <Button onClick={handleAddNew}>
+        <Button onClick={handleAddNew} className="w-full md:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Novo pedido
         </Button>
       </div>
 
       <div className="mb-6">
         <Select value={filtroStatus} onValueChange={setFiltroStatus}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full md:w-[200px]">
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
@@ -392,14 +395,14 @@ const Pedidos = () => {
                     </div>
                   </div>
                   
-                  <div className="flex justify-end gap-2 mt-4">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(pedido)}>
+                  <div className="flex flex-col md:flex-row md:justify-end gap-2 mt-4">
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(pedido)} className="w-full md:w-auto">
                       <Edit className="h-4 w-4 mr-1" /> Editar
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)}>
+                    <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)} className="w-full md:w-auto">
                       <Archive className="h-4 w-4 mr-1" /> Arquivar
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(pedido.id)}>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(pedido.id)} className="w-full md:w-auto">
                       <Trash className="h-4 w-4 mr-1" /> Excluir
                     </Button>
                   </div>
