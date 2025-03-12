@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -84,7 +83,6 @@ export function AppSidebar() {
     fetchTarefasPendentes();
     fetchAniversariantes();
 
-    // Setup real-time subscription for task updates
     const taskChannel = supabase
       .channel('public:tasks')
       .on('postgres_changes', {
@@ -104,10 +102,7 @@ export function AppSidebar() {
       }, fetchTarefasPendentes)
       .subscribe();
 
-    // Setup event listener for client changes in local storage
     window.addEventListener('storage', handleStorageChange);
-
-    // Create a custom event system to capture client changes without page refresh
     window.addEventListener('clientDataChanged', fetchAniversariantes);
 
     return () => {
@@ -117,12 +112,10 @@ export function AppSidebar() {
     };
   }, []);
 
-  // Create an interval to check for birthdays and tasks every minute
-  // This ensures the notifications stay up-to-date as the day changes
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchAniversariantes();
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -145,7 +138,6 @@ export function AppSidebar() {
         throw error;
       }
 
-      // Transformar os dados do banco para o formato que usamos na interface
       const tarefasFormatadas = data?.map(task => ({
         id: task.id,
         titulo: task.title,
@@ -161,13 +153,11 @@ export function AppSidebar() {
 
   const fetchAniversariantes = async () => {
     try {
-      // Check for local storage data first
       const clientesSalvos = localStorage.getItem('clientes');
       if (clientesSalvos) {
         const clientes = JSON.parse(clientesSalvos);
         const hoje = new Date();
         
-        // Filter to find today's birthdays
         const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
           if (!cliente.aniversario) return false;
           
@@ -175,7 +165,6 @@ export function AppSidebar() {
             const aniversario = parseISO(cliente.aniversario);
             if (!isValid(aniversario)) return false;
             
-            // Check if month and day match today's date (ignore year)
             return (
               aniversario.getDate() === hoje.getDate() && 
               aniversario.getMonth() === hoje.getMonth()
@@ -189,7 +178,6 @@ export function AppSidebar() {
         setAniversariantes(aniversariantesHoje);
         console.log("Aniversariantes hoje:", aniversariantesHoje.length);
         
-        // Show notification for birthdays if there are any and we're not on the birthdays page
         if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
           toast({
             title: "Aniversariantes hoje!",
@@ -209,9 +197,7 @@ export function AppSidebar() {
     setOpenMobile(!openMobile);
   };
   
-  // Check if we have active birthdays
   const hasActiveBirthdays = aniversariantes.length > 0;
-  // Check if we have pending tasks
   const hasPendingTasks = tarefasPendentes.length > 0;
 
   const renderSidebarContent = () => (
@@ -247,15 +233,13 @@ export function AppSidebar() {
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
                     
-                    {/* Notification indicator for birthdays - Enhanced with blue pulse animation */}
-                    {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
+                    {(item.path === "/aniversariantes" && hasActiveBirthdays) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
                       </>
                     )}
 
-                    {/* Notification indicator for pending tasks - Enhanced with blue color */}
                     {(item.path === "/tarefas" && hasPendingTasks && location.pathname !== "/tarefas") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
@@ -267,7 +251,6 @@ export function AppSidebar() {
                     {item.title}
                   </span>
                   
-                  {/* Counter badges */}
                   {item.title === "Aniversariantes" && hasActiveBirthdays && (
                     <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                       {aniversariantes.length}
