@@ -4,11 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckSquare, Bell } from "lucide-react";
+import { CheckSquare, Bell, Gift, PartyPopper } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Tarefa {
   id: string;
@@ -17,8 +18,18 @@ interface Tarefa {
   dataVencimento: string;
 }
 
+interface Cliente {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  aniversario: string;
+  classificacao: number;
+}
+
 export default function Notificacoes() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
+  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -26,6 +37,7 @@ export default function Notificacoes() {
   useEffect(() => {
     if (user) {
       fetchTarefasPendentes();
+      fetchAniversariantes();
     } else {
       setLoading(false);
     }
@@ -88,6 +100,45 @@ export default function Notificacoes() {
     }
   }
 
+  const fetchAniversariantes = async () => {
+    try {
+      // Check for local storage data first
+      const clientesSalvos = localStorage.getItem('clientes');
+      if (clientesSalvos) {
+        const clientes = JSON.parse(clientesSalvos);
+        const hoje = new Date();
+        
+        // Filter to find today's birthdays
+        const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
+          if (!cliente.aniversario) return false;
+          
+          try {
+            const aniversario = parseISO(cliente.aniversario);
+            if (!isValid(aniversario)) return false;
+            
+            // Check if month and day match today's date (ignore year)
+            return (
+              aniversario.getDate() === hoje.getDate() && 
+              aniversario.getMonth() === hoje.getMonth()
+            );
+          } catch (error) {
+            console.error("Erro ao processar aniversário:", error);
+            return false;
+          }
+        });
+        
+        setAniversariantes(aniversariantesHoje);
+      } else {
+        setAniversariantes([]);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar aniversariantes:", error);
+      setAniversariantes([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const toggleTarefaConcluida = async (id: string) => {
     try {
       const { error } = await supabase
@@ -133,69 +184,155 @@ export default function Notificacoes() {
         <div>
           <h1 className="text-2xl font-bold">Notificações</h1>
           <p className="text-muted-foreground">
-            Acompanhe tarefas pendentes
+            Acompanhe tarefas pendentes e aniversariantes
           </p>
         </div>
-        {tarefasPendentes.length > 0 && (
-          <div className="relative">
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
-            <Bell className="w-6 h-6 text-blue-500" />
-          </div>
-        )}
+        <div className="flex space-x-2">
+          {tarefasPendentes.length > 0 && (
+            <div className="relative">
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
+              <CheckSquare className="w-6 h-6 text-blue-500" />
+            </div>
+          )}
+          {aniversariantes.length > 0 && (
+            <div className="relative">
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-ping"></div>
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
+              <Gift className="w-6 h-6 text-blue-500" />
+            </div>
+          )}
+        </div>
       </div>
       
-      <div className="grid gap-6">
-        {tarefasPendentes.length > 0 && (
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckSquare className="w-5 h-5 text-blue-500" />
-              <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
-            </div>
-            <div className="space-y-4">
-              {tarefasPendentes.map((tarefa) => (
-                <div
-                  key={tarefa.id}
-                  className="p-4 border rounded-lg"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <CheckSquare className="w-5 h-5 text-blue-500" />
-                      <p className="font-medium">{tarefa.titulo}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-muted-foreground">
-                        {tarefa.dataVencimento ? format(parseISO(tarefa.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "Sem data"}
-                      </p>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => toggleTarefaConcluida(tarefa.id)}
-                      >
-                        Concluir
-                      </Button>
-                    </div>
-                  </div>
-                  <Progress 
-                    value={0} 
-                    className="h-2 bg-gray-100" 
-                  />
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+      <Tabs defaultValue="tasks" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="tasks" className="relative">
+            Tarefas
+            {tarefasPendentes.length > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                {tarefasPendentes.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="birthdays" className="relative">
+            Aniversariantes
+            {aniversariantes.length > 0 && (
+              <span className="ml-2 bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                {aniversariantes.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
         
-        {tarefasPendentes.length === 0 && (
-          <Card className="p-6 flex flex-col items-center justify-center text-center">
-            <Bell className="w-12 h-12 text-gray-300 mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Nenhuma notificação</h2>
-            <p className="text-muted-foreground">
-              Você não tem tarefas pendentes
-            </p>
-          </Card>
-        )}
-      </div>
+        <TabsContent value="tasks">
+          <div className="grid gap-6">
+            {tarefasPendentes.length > 0 && (
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckSquare className="w-5 h-5 text-blue-500" />
+                  <h2 className="text-lg font-semibold">Tarefas Pendentes</h2>
+                </div>
+                <div className="space-y-4">
+                  {tarefasPendentes.map((tarefa) => (
+                    <div
+                      key={tarefa.id}
+                      className="p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <CheckSquare className="w-5 h-5 text-blue-500" />
+                          <p className="font-medium">{tarefa.titulo}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-muted-foreground">
+                            {tarefa.dataVencimento ? format(parseISO(tarefa.dataVencimento), "dd/MM/yyyy", { locale: ptBR }) : "Sem data"}
+                          </p>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => toggleTarefaConcluida(tarefa.id)}
+                          >
+                            Concluir
+                          </Button>
+                        </div>
+                      </div>
+                      <Progress 
+                        value={0} 
+                        className="h-2 bg-gray-100" 
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            
+            {tarefasPendentes.length === 0 && (
+              <Card className="p-6 flex flex-col items-center justify-center text-center">
+                <CheckSquare className="w-12 h-12 text-gray-300 mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Nenhuma tarefa pendente</h2>
+                <p className="text-muted-foreground">
+                  Você está em dia com suas tarefas!
+                </p>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="birthdays">
+          <div className="grid gap-6">
+            {aniversariantes.length > 0 && (
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Gift className="w-5 h-5 text-blue-500" />
+                  <h2 className="text-lg font-semibold">Aniversariantes Hoje</h2>
+                </div>
+                <div className="space-y-4">
+                  {aniversariantes.map((cliente) => (
+                    <div
+                      key={cliente.id}
+                      className="p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <PartyPopper className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{cliente.nome}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {cliente.telefone}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => window.open(`mailto:${cliente.email}`, '_blank')}
+                          >
+                            Enviar Mensagem
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+            
+            {aniversariantes.length === 0 && (
+              <Card className="p-6 flex flex-col items-center justify-center text-center">
+                <Gift className="w-12 h-12 text-gray-300 mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Nenhum aniversariante hoje</h2>
+                <p className="text-muted-foreground">
+                  Não há clientes fazendo aniversário na data de hoje.
+                </p>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

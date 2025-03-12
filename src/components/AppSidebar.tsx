@@ -247,7 +247,7 @@ export function AppSidebar() {
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
                     
-                    {/* Notification indicator for birthdays - Only show if there are birthdays */}
+                    {/* Notification indicator for birthdays - Enhanced with blue pulse animation */}
                     {(item.path === "/aniversariantes" && hasActiveBirthdays && location.pathname !== "/aniversariantes") && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />

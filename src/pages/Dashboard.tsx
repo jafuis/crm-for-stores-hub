@@ -75,6 +75,24 @@ export default function Dashboard() {
     }
   }, [user]);
 
+  useEffect(() => {
+    // Setup real-time subscription for sales updates
+    const salesChannel = supabase
+      .channel('public:sales')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'sales'
+      }, () => {
+        fetchData(); // Refresh data when sales change
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(salesChannel);
+    };
+  }, [user]);
+
   const fetchData = async () => {
     if (!user) return;
     
@@ -343,15 +361,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Users className="w-5 h-5 text-[#9b87f5]" />
-                <h3 className="text-sm font-medium text-gray-500">Total de Clientes</h3>
-              </div>
-              <p className="text-2xl font-bold mt-2">{totalClientes}</p>
-            </Card>
-
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-5 h-5 date-icon" />
@@ -366,11 +376,12 @@ export default function Dashboard() {
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Gift className="w-5 h-5 text-pink-500" />
-                <h3 className="text-sm font-medium text-gray-500">Aniversariantes</h3>
+                <h3 className="text-sm font-medium text-gray-500">Notificações</h3>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm flex items-center">
+                    <Gift className="w-4 h-4 mr-1 text-blue-500" />
                     Aniversariantes Hoje
                   </span>
                   <span className="text-xl font-semibold">{aniversariantes.length}</span>
