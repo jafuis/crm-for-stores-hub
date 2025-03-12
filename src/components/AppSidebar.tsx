@@ -188,6 +188,14 @@ export function AppSidebar() {
         
         setAniversariantes(aniversariantesHoje);
         console.log("Aniversariantes hoje:", aniversariantesHoje.length);
+        
+        // Show notification for birthdays if there are any and we're not on the birthdays page
+        if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
+          toast({
+            title: "Aniversariantes hoje!",
+            description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
+          });
+        }
       } else {
         setAniversariantes([]);
       }
@@ -228,7 +236,9 @@ export function AppSidebar() {
                 >
                   <div className="relative">
                     {item.title === "Aniversariantes" ? (
-                      <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
+                      <div className={`${hasActiveBirthdays ? 'animate-pulse' : ''}`}>
+                        <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
+                      </div>
                     ) : item.title === "Tarefas" ? (
                       <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
                         <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />

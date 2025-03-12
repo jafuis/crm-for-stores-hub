@@ -32,11 +32,11 @@ import {
   Archive, 
   Edit,
   Plus,
-  ShoppingBag,
-  Users
+  RefreshCcw
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -49,6 +49,13 @@ interface Financa {
   status: string;
   data_vencimento: string | null;
   created_at: string;
+}
+
+interface Venda {
+  id: string;
+  valor: number;
+  data: string;
+  arquivada?: boolean;
 }
 
 const categorias = {
@@ -69,14 +76,14 @@ const Financas = () => {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const { toast } = useToast();
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
+  const [activeTab, setActiveTab] = useState<string>("ativos");
   const { user } = useAuth();
   
   // Dashboard stats
   const [totalReceitas, setTotalReceitas] = useState(0);
   const [totalDespesas, setTotalDespesas] = useState(0);
   const [totalFixas, setTotalFixas] = useState(0);
-  const [vendasMes, setVendasMes] = useState(0);
-  const [totalClientes, setTotalClientes] = useState(0);
+  const [vendasDoDia, setVendasDoDia] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -96,8 +103,21 @@ const Financas = () => {
         })
         .subscribe();
 
+      // Set up realtime subscription for sales
+      const salesChannel = supabase
+        .channel('public:sales')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'sales'
+        }, () => {
+          fetchDashboardData();
+        })
+        .subscribe();
+
       return () => {
         supabase.removeChannel(channel);
+        supabase.removeChannel(salesChannel);
       };
     }
   }, [user]);
@@ -140,28 +160,19 @@ const Financas = () => {
       const { data: financasData, error: financasError } = await supabase
         .from('financas')
         .select('*')
-        .eq('owner_id', user.id);
+        .eq('owner_id', user.id)
+        .eq('status', 'ativo');
 
       if (financasError) throw financasError;
 
-      // Calculate totals
+      // Calculate totals for active finances
       let receitas = 0;
       let despesas = 0;
       let fixas = 0;
-      let vendas = 0;
 
       financasData?.forEach(item => {
         if (item.tipo === 'receita') {
           receitas += item.valor;
-          if (item.categoria === 'Vendas') {
-            // Check if it's from the current month
-            const itemDate = new Date(item.created_at);
-            const currentDate = new Date();
-            if (itemDate.getMonth() === currentDate.getMonth() && 
-                itemDate.getFullYear() === currentDate.getFullYear()) {
-              vendas += item.valor;
-            }
-          }
         } else if (item.tipo === 'despesa') {
           despesas += item.valor;
         } else if (item.tipo === 'fixa') {
@@ -172,14 +183,25 @@ const Financas = () => {
       setTotalReceitas(receitas);
       setTotalDespesas(despesas);
       setTotalFixas(fixas);
-      setVendasMes(vendas);
 
-      // Fetch clients count
-      const clientesString = localStorage.getItem('clientes');
-      if (clientesString) {
-        const clientes = JSON.parse(clientesString);
-        setTotalClientes(clientes.length);
-      }
+      // Fetch today's sales
+      const hoje = new Date();
+      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
+      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
+
+      const { data: salesData, error: salesError } = await supabase
+        .from('sales')
+        .select('id, total_amount, created_at, status')
+        .eq('owner_id', user.id)
+        .gte('created_at', inicioHoje)
+        .lte('created_at', fimHoje)
+        .neq('status', 'archived');
+
+      if (salesError) throw salesError;
+
+      const totalVendasHoje = salesData?.reduce((total, venda) => total + venda.total_amount, 0) || 0;
+      setVendasDoDia(totalVendasHoje);
+
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard:", error);
     }
@@ -305,6 +327,34 @@ const Financas = () => {
     }
   };
 
+  const handleRestore = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('financas')
+        .update({ status: 'ativo' })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Registro restaurado com sucesso",
+      });
+
+      await fetchFinancas();
+      await fetchDashboardData();
+    } catch (error) {
+      console.error("Erro ao restaurar finança:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível restaurar o registro",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const { error } = await supabase
@@ -334,10 +384,21 @@ const Financas = () => {
   };
 
   const getFilteredFinancas = () => {
-    if (filtroTipo === "todos") {
-      return financas;
+    if (activeTab === "arquivados") {
+      // For archived items
+      const arquivados = financas.filter(financa => financa.status === 'arquivado');
+      if (filtroTipo === "todos") {
+        return arquivados;
+      }
+      return arquivados.filter(financa => financa.tipo === filtroTipo);
+    } else {
+      // For active items
+      const ativos = financas.filter(financa => financa.status === 'ativo');
+      if (filtroTipo === "todos") {
+        return ativos;
+      }
+      return ativos.filter(financa => financa.tipo === filtroTipo);
     }
-    return financas.filter(financa => financa.tipo === filtroTipo);
   };
 
   const formatDate = (dateString: string | null) => {
@@ -399,7 +460,7 @@ const Financas = () => {
       </div>
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-green-600 flex items-center gap-2">
@@ -439,102 +500,173 @@ const Financas = () => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-orange-600 flex items-center gap-2">
-              <ShoppingBag className="h-5 w-5" />
-              Vendas do Mês
+              <DollarSign className="h-5 w-5" />
+              Vendas do Dia
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{formatCurrency(vendasMes)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(vendasDoDia)}</p>
           </CardContent>
         </Card>
+      </div>
+
+      <Tabs defaultValue="ativos" className="w-full" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="ativos">Lançamentos Ativos</TabsTrigger>
+          <TabsTrigger value="arquivados">Arquivados</TabsTrigger>
+        </TabsList>
         
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-purple-600 flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Total de Clientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold">{totalClientes}</p>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="ativos" className="space-y-6">
+          <div className="mb-6">
+            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="receita">Receitas</SelectItem>
+                <SelectItem value="despesa">Despesas</SelectItem>
+                <SelectItem value="fixa">Fixas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      <div className="mb-6">
-        <Select value={filtroTipo} onValueChange={setFiltroTipo}>
-          <SelectTrigger className="w-full md:w-[200px]">
-            <SelectValue placeholder="Filtrar por tipo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
-            <SelectItem value="receita">Receitas</SelectItem>
-            <SelectItem value="despesa">Despesas</SelectItem>
-            <SelectItem value="fixa">Fixas</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <Accordion type="single" collapsible className="w-full">
+            {getFilteredFinancas().map((financa) => (
+              <AccordionItem key={financa.id} value={financa.id}>
+                <AccordionTrigger className="px-4 hover:no-underline">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {getTipoIcon(financa.tipo)}
+                      <span className="font-medium">{financa.descricao}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`font-semibold ${getStatusClass(financa.tipo)}`}>
+                        {formatCurrency(financa.valor)}
+                      </span>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Categoria</p>
+                        <p>{financa.categoria}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                        <p className="capitalize">{financa.status}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Data de Criação</p>
+                        <p>{formatDate(financa.created_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Vencimento</p>
+                        <p>{financa.data_vencimento ? formatDate(financa.data_vencimento) : "N/A"}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:justify-end gap-2 mt-4">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(financa)} className="w-full md:w-auto">
+                        <Edit className="h-4 w-4 mr-1" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleArchive(financa.id)} className="w-full md:w-auto">
+                        <Archive className="h-4 w-4 mr-1" /> Arquivar
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
+                        <Trash className="h-4 w-4 mr-1" /> Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
 
-      <Accordion type="single" collapsible className="w-full">
-        {getFilteredFinancas().map((financa) => (
-          <AccordionItem key={financa.id} value={financa.id}>
-            <AccordionTrigger className="px-4 hover:no-underline">
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  {getTipoIcon(financa.tipo)}
-                  <span className="font-medium">{financa.descricao}</span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className={`font-semibold ${getStatusClass(financa.tipo)}`}>
-                    {formatCurrency(financa.valor)}
-                  </span>
-                </div>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="px-4 pb-4">
-              <div className="space-y-2">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Categoria</p>
-                    <p>{financa.categoria}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-                    <p className="capitalize">{financa.status}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Data de Criação</p>
-                    <p>{formatDate(financa.created_at)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Vencimento</p>
-                    <p>{financa.data_vencimento ? formatDate(financa.data_vencimento) : "N/A"}</p>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row md:justify-end gap-2 mt-4">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(financa)} className="w-full md:w-auto">
-                    <Edit className="h-4 w-4 mr-1" /> Editar
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleArchive(financa.id)} className="w-full md:w-auto">
-                    <Archive className="h-4 w-4 mr-1" /> Arquivar
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
-                    <Trash className="h-4 w-4 mr-1" /> Excluir
-                  </Button>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+          {getFilteredFinancas().length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400">
+                Nenhum registro financeiro encontrado para o filtro selecionado.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="arquivados" className="space-y-6">
+          <div className="mb-6">
+            <Select value={filtroTipo} onValueChange={setFiltroTipo}>
+              <SelectTrigger className="w-full md:w-[200px]">
+                <SelectValue placeholder="Filtrar por tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="receita">Receitas</SelectItem>
+                <SelectItem value="despesa">Despesas</SelectItem>
+                <SelectItem value="fixa">Fixas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {getFilteredFinancas().length === 0 && (
-        <div className="text-center py-10">
-          <p className="text-gray-500 dark:text-gray-400">
-            Nenhum registro financeiro encontrado para o filtro selecionado.
-          </p>
-        </div>
-      )}
+          <Accordion type="single" collapsible className="w-full">
+            {getFilteredFinancas().map((financa) => (
+              <AccordionItem key={financa.id} value={financa.id}>
+                <AccordionTrigger className="px-4 hover:no-underline">
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      {getTipoIcon(financa.tipo)}
+                      <span className="font-medium">{financa.descricao}</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`font-semibold ${getStatusClass(financa.tipo)}`}>
+                        {formatCurrency(financa.valor)}
+                      </span>
+                    </div>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-4 pb-4">
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Categoria</p>
+                        <p>{financa.categoria}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
+                        <p className="capitalize">{financa.status}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Data de Criação</p>
+                        <p>{formatDate(financa.created_at)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Vencimento</p>
+                        <p>{financa.data_vencimento ? formatDate(financa.data_vencimento) : "N/A"}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:justify-end gap-2 mt-4">
+                      <Button variant="outline" size="sm" onClick={() => handleRestore(financa.id)} className="w-full md:w-auto">
+                        <RefreshCcw className="h-4 w-4 mr-1" /> Restaurar
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
+                        <Trash className="h-4 w-4 mr-1" /> Excluir
+                      </Button>
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+
+          {getFilteredFinancas().length === 0 && (
+            <div className="text-center py-10">
+              <p className="text-gray-500 dark:text-gray-400">
+                Nenhum registro financeiro arquivado encontrado para o filtro selecionado.
+              </p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
