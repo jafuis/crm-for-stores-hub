@@ -11,7 +11,6 @@ import Fornecedores from "@/pages/Fornecedores";
 import Tarefas from "@/pages/Tarefas";
 import Notificacoes from "@/pages/Notificacoes";
 import Aniversariantes from "@/pages/Aniversariantes";
-import Aniversarios from "@/pages/Aniversarios";
 import Estoque from "@/pages/Estoque";
 import Relatorios from "@/pages/Relatorios";
 import Configuracoes from "@/pages/Configuracoes";
@@ -36,7 +35,6 @@ function App() {
             <Route path="/tarefas" element={<Tarefas />} />
             <Route path="/notificacoes" element={<Notificacoes />} />
             <Route path="/aniversariantes" element={<Aniversariantes />} />
-            <Route path="/aniversarios" element={<Aniversarios />} />
             <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/novos-projetos" element={<NovosProjetos />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
