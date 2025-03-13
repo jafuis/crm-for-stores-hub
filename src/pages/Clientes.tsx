@@ -264,8 +264,10 @@ export default function Clientes() {
           <Star
             key={star}
             className={`w-5 h-5 ${star <= value ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
-              ${!readOnly && "cursor-pointer hover:text-yellow-400"}`}
+              ${!readOnly ? "cursor-pointer hover:text-yellow-400" : ""}`}
             onClick={() => !readOnly && onChange && onChange(star)}
+            onMouseEnter={() => {}} // Removido o efeito de hover que estava causando o problema
+            onMouseLeave={() => {}} // Removido o efeito de hover que estava causando o problema
           />
         ))}
       </div>

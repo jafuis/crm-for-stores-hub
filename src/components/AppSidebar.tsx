@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -15,7 +16,9 @@ import {
   User,
   Calendar,
   Mail,
-  DollarSign
+  DollarSign,
+  Receipt,
+  WalletCards
 } from "lucide-react";
 import {
   Sidebar,
@@ -32,7 +35,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
-import { format, parseISO, isValid, isSameDay } from "date-fns";
+import { format, parseISO, isValid, isSameDay, isAfter, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +57,15 @@ interface Cliente {
   classificacao: number;
 }
 
+interface ContaPagar {
+  id: string;
+  descricao: string;
+  data_vencimento: string;
+  valor: number;
+  status: string;
+  importante: boolean;
+}
+
 const menuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Clientes", icon: Users, path: "/clientes" },
@@ -62,6 +74,7 @@ const menuItems = [
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
   { title: "Finanças", icon: DollarSign, path: "/financas" },
+  { title: "A Pagar", icon: WalletCards, path: "/contas-pagar" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
@@ -77,48 +90,66 @@ export function AppSidebar() {
   const isMobile = useIsMobile();
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
+  const [contasVencidas, setContasVencidas] = useState<ContaPagar[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchTarefasPendentes();
-    fetchAniversariantes();
+    if (user) {
+      fetchTarefasPendentes();
+      fetchAniversariantes();
+      fetchContasVencidas();
 
-    const taskChannel = supabase
-      .channel('public:tasks')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'tasks'
-      }, fetchTarefasPendentes)
-      .subscribe();
+      const taskChannel = supabase
+        .channel('public:tasks')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'tasks'
+        }, fetchTarefasPendentes)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tasks'
+        }, fetchTarefasPendentes)
+        .on('postgres_changes', {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'tasks'
+        }, fetchTarefasPendentes)
+        .subscribe();
 
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('clientDataChanged', fetchAniversariantes);
+      const contasChannel = supabase
+        .channel('public:financas')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'financas'
+        }, fetchContasVencidas)
+        .subscribe();
 
-    return () => {
-      supabase.removeChannel(taskChannel);
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('clientDataChanged', fetchAniversariantes);
-    };
-  }, []);
+      window.addEventListener('storage', handleStorageChange);
+      window.addEventListener('clientDataChanged', fetchAniversariantes);
+
+      return () => {
+        supabase.removeChannel(taskChannel);
+        supabase.removeChannel(contasChannel);
+        window.removeEventListener('storage', handleStorageChange);
+        window.removeEventListener('clientDataChanged', fetchAniversariantes);
+      };
+    }
+  }, [user]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      fetchAniversariantes();
+      if (user) {
+        fetchAniversariantes();
+        fetchContasVencidas();
+      }
     }, 60000);
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [user]);
 
   const handleStorageChange = (event: StorageEvent) => {
     if (event.key === 'clientes') {
@@ -127,12 +158,14 @@ export function AppSidebar() {
   };
 
   const fetchTarefasPendentes = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('tasks')
         .select('*')
         .eq('status', 'pending')
-        .eq('owner_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('owner_id', user.id);
 
       if (error) {
         throw error;
@@ -152,17 +185,24 @@ export function AppSidebar() {
   };
 
   const fetchAniversariantes = async () => {
+    if (!user) return;
+    
     try {
-      const clientesSalvos = localStorage.getItem('clientes');
-      if (clientesSalvos) {
-        const clientes = JSON.parse(clientesSalvos);
-        const hoje = new Date();
+      const { data, error } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('owner_id', user.id);
         
-        const aniversariantesHoje = clientes.filter((cliente: Cliente) => {
-          if (!cliente.aniversario) return false;
+      if (error) throw error;
+      
+      const hoje = new Date();
+      
+      const aniversariantesHoje = data
+        .filter(cliente => {
+          if (!cliente.birthday) return false;
           
           try {
-            const aniversario = parseISO(cliente.aniversario);
+            const aniversario = parseISO(cliente.birthday);
             if (!isValid(aniversario)) return false;
             
             return (
@@ -173,23 +213,94 @@ export function AppSidebar() {
             console.error("Erro ao processar aniversário:", error);
             return false;
           }
+        })
+        .map(cliente => ({
+          id: cliente.id,
+          nome: cliente.name,
+          telefone: cliente.phone || '',
+          email: cliente.email || '',
+          aniversario: cliente.birthday || '',
+          classificacao: cliente.classification || 1
+        }));
+      
+      setAniversariantes(aniversariantesHoje);
+      
+      if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
+        toast({
+          title: "Aniversariantes hoje!",
+          description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
         });
-        
-        setAniversariantes(aniversariantesHoje);
-        console.log("Aniversariantes hoje:", aniversariantesHoje.length);
-        
-        if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
-          toast({
-            title: "Aniversariantes hoje!",
-            description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
-          });
-        }
-      } else {
-        setAniversariantes([]);
       }
     } catch (error) {
       console.error("Erro ao buscar aniversariantes:", error);
       setAniversariantes([]);
+    }
+  };
+
+  const fetchContasVencidas = async () => {
+    if (!user) return;
+    
+    try {
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      
+      const { data, error } = await supabase
+        .from('financas')
+        .select('*')
+        .eq('owner_id', user.id)
+        .eq('tipo', 'despesa')
+        .or(`status.eq.pendente,status.eq.vencida`)
+        .order('importante', { ascending: false })
+        .order('data_vencimento', { ascending: true });
+      
+      if (error) throw error;
+      
+      const contasFormatadas = data.map(conta => {
+        const dataVencimento = parseISO(conta.data_vencimento);
+        let status = conta.status;
+        
+        // Atualiza o status para "vencida" se passou da data de vencimento
+        if (status === 'pendente' && isBefore(dataVencimento, hoje)) {
+          status = 'vencida';
+          // Atualiza o status no banco de dados
+          supabase
+            .from('financas')
+            .update({ status: 'vencida' })
+            .eq('id', conta.id)
+            .then(() => console.log("Status atualizado para vencido"))
+            .catch(err => console.error("Erro ao atualizar status:", err));
+        }
+        
+        return {
+          id: conta.id,
+          descricao: conta.descricao,
+          data_vencimento: conta.data_vencimento,
+          valor: conta.valor,
+          status: status,
+          importante: conta.importante || false
+        };
+      });
+      
+      // Filtra apenas contas vencidas ou próximas de vencer (7 dias)
+      const contasRelevantes = contasFormatadas.filter(conta => {
+        const dataVencimento = parseISO(conta.data_vencimento);
+        const limitePrazo = addDays(hoje, 7);
+        return conta.status === 'vencida' || (conta.status === 'pendente' && isBefore(dataVencimento, limitePrazo));
+      });
+      
+      setContasVencidas(contasRelevantes);
+      
+      // Notifica sobre contas vencidas se não estiver na página de contas a pagar
+      if (contasRelevantes.filter(c => c.status === 'vencida').length > 0 && location.pathname !== "/contas-pagar") {
+        toast({
+          title: "Contas vencidas!",
+          description: `Há ${contasRelevantes.filter(c => c.status === 'vencida').length} conta(s) vencidas.`,
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao buscar contas a pagar:", error);
+      setContasVencidas([]);
     }
   };
 
@@ -199,6 +310,7 @@ export function AppSidebar() {
   
   const hasActiveBirthdays = aniversariantes.length > 0;
   const hasPendingTasks = tarefasPendentes.length > 0;
+  const hasOverdueBills = contasVencidas.filter(c => c.status === 'vencida').length > 0;
 
   const renderSidebarContent = () => (
     <SidebarContent className="bg-white dark:bg-gray-800 h-full">
@@ -229,6 +341,10 @@ export function AppSidebar() {
                       <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
                         <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
                       </div>
+                    ) : item.title === "A Pagar" ? (
+                      <div className={`${hasOverdueBills ? 'animate-pulse' : ''}`}>
+                        <WalletCards className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasOverdueBills ? 'text-red-500' : ''}`} />
+                      </div>
                     ) : (
                       <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
                     )}
@@ -240,14 +356,25 @@ export function AppSidebar() {
                       </>
                     )}
 
-                    {(item.path === "/tarefas" && hasPendingTasks && location.pathname !== "/tarefas") && (
+                    {(item.path === "/tarefas" && hasPendingTasks) && (
                       <>
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                         <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
                       </>
                     )}
+                    
+                    {(item.path === "/contas-pagar" && hasOverdueBills) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      </>
+                    )}
                   </div>
-                  <span className={`${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}`}>
+                  <span className={`
+                    ${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} 
+                    ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}
+                    ${item.title === "A Pagar" && hasOverdueBills ? 'text-red-500 font-medium' : ''}
+                  `}>
                     {item.title}
                   </span>
                   
@@ -260,6 +387,12 @@ export function AppSidebar() {
                   {item.title === "Tarefas" && hasPendingTasks && (
                     <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                       {tarefasPendentes.length}
+                    </div>
+                  )}
+                  
+                  {item.title === "A Pagar" && hasOverdueBills && (
+                    <div className="ml-auto bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                      {contasVencidas.filter(c => c.status === 'vencida').length}
                     </div>
                   )}
                 </SidebarMenuButton>

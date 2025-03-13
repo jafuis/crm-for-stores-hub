@@ -19,6 +19,7 @@ import MinhaConta from "@/pages/MinhaConta";
 import NotFound from "@/pages/NotFound";
 import Financas from "@/pages/Financas";
 import Pedidos from "@/pages/Pedidos";
+import ContasPagar from "@/pages/ContasPagar";
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
             <Route path="/minha-conta" element={<MinhaConta />} />
             <Route path="/financas" element={<Financas />} />
             <Route path="/pedidos" element={<Pedidos />} />
+            <Route path="/contas-pagar" element={<ContasPagar />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
