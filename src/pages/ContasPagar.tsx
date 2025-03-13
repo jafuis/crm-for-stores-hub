@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -101,24 +100,13 @@ export default function ContasPagar() {
         // Atualiza o status para "vencida" se passou da data de vencimento
         if (status === 'pendente' && isBefore(dataVencimento, hoje)) {
           status = 'vencida';
-          // Atualizar o status no banco de dados
-          try {
-            // Using a Promise without catch - fixing this
-            (async () => {
-              try {
-                await supabase
-                  .from('financas')
-                  .update({ status: 'vencida' })
-                  .eq('id', conta.id);
-                
-                console.log("Status atualizado para vencido");
-              } catch (err) {
-                console.error("Erro ao atualizar status:", err);
-              }
-            })();
-          } catch (err) {
-            console.error("Erro ao atualizar status:", err);
-          }
+          // Atualiza o status no banco de dados
+          supabase
+            .from('financas')
+            .update({ status: 'vencida' })
+            .eq('id', conta.id)
+            .then(() => console.log("Status atualizado para vencido"))
+            .catch(err => console.error("Erro ao atualizar status:", err));
         }
         
         return {

@@ -52,7 +52,6 @@ export type Database = {
           data_vencimento: string | null
           descricao: string
           id: string
-          importante: boolean | null
           owner_id: string
           status: string
           tipo: string
@@ -64,7 +63,6 @@ export type Database = {
           data_vencimento?: string | null
           descricao: string
           id?: string
-          importante?: boolean | null
           owner_id: string
           status?: string
           tipo: string
@@ -76,7 +74,6 @@ export type Database = {
           data_vencimento?: string | null
           descricao?: string
           id?: string
-          importante?: boolean | null
           owner_id?: string
           status?: string
           tipo?: string
