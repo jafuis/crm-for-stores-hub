@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, Search, Plus, MoreVertical, Star, WalletCards, AlertTriangle, Check, Archive, Trash2, WalletCardsIcon } from "lucide-react";
+import { Calendar, Clock, Search, Plus, MoreVertical, Star, WalletCards, AlertTriangle, Check, Archive, Trash2, WalletCardsIcon, Edit2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { parseISO, format, isBefore, isToday, addDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -53,6 +54,7 @@ export default function ContasPagar() {
     importante: false
   });
   const [contaEditando, setContaEditando] = useState<ContaPagar | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const hoje = new Date();
@@ -101,12 +103,17 @@ export default function ContasPagar() {
         if (status === 'pendente' && isBefore(dataVencimento, hoje)) {
           status = 'vencida';
           // Atualiza o status no banco de dados
-          supabase
-            .from('financas')
-            .update({ status: 'vencida' })
-            .eq('id', conta.id)
-            .then(() => console.log("Status atualizado para vencido"))
-            .catch(err => console.error("Erro ao atualizar status:", err));
+          (async () => {
+            try {
+              await supabase
+                .from('financas')
+                .update({ status: 'vencida' })
+                .eq('id', conta.id);
+              console.log("Status atualizado para vencido");
+            } catch (err) {
+              console.error("Erro ao atualizar status:", err);
+            }
+          })();
         }
         
         return {
@@ -185,7 +192,8 @@ export default function ContasPagar() {
             importante: novaConta.importante,
             status: status
           })
-          .eq('id', contaEditando.id);
+          .eq('id', contaEditando.id)
+          .eq('owner_id', user.id);
         
         if (error) throw error;
         
@@ -225,6 +233,7 @@ export default function ContasPagar() {
         importante: false
       });
       setContaEditando(null);
+      setSheetOpen(false);
       
       // Recarregar contas
       fetchContas();
@@ -249,6 +258,7 @@ export default function ContasPagar() {
       categoria: conta.categoria || "geral",
       importante: conta.importante
     });
+    setSheetOpen(true);
   };
 
   const handleMarcarComoPaga = async (id: string) => {
@@ -258,7 +268,8 @@ export default function ContasPagar() {
       const { error } = await supabase
         .from('financas')
         .update({ status: 'paga' })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -285,7 +296,8 @@ export default function ContasPagar() {
       const { error } = await supabase
         .from('financas')
         .update({ status: 'arquivada' })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -322,7 +334,8 @@ export default function ContasPagar() {
       const { error } = await supabase
         .from('financas')
         .update({ status: novoStatus })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -349,7 +362,8 @@ export default function ContasPagar() {
       const { error } = await supabase
         .from('financas')
         .update({ importante: !atual })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -378,7 +392,8 @@ export default function ContasPagar() {
       const { error } = await supabase
         .from('financas')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('owner_id', user.id);
       
       if (error) throw error;
       
@@ -437,9 +452,18 @@ export default function ContasPagar() {
           <h1 className="text-2xl font-bold">Contas a Pagar</h1>
           <p className="text-muted-foreground">Gerencie suas despesas e pagamentos</p>
         </div>
-        <Sheet>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
           <SheetTrigger asChild>
-            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto">
+            <Button className="bg-[#9b87f5] hover:bg-[#7e69ab] w-full md:w-auto" onClick={() => {
+              setContaEditando(null);
+              setNovaConta({
+                descricao: "",
+                valor: "",
+                data_vencimento: new Date().toISOString().split('T')[0],
+                categoria: "geral",
+                importante: false
+              });
+            }}>
               <Plus className="w-4 h-4 mr-2" />
               Nova Conta
             </Button>
@@ -589,6 +613,14 @@ export default function ContasPagar() {
                         <Check className="w-4 h-4 mr-1" />
                         Pagar
                       </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditarConta(conta)}
+                      >
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Editar
+                      </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -596,9 +628,6 @@ export default function ContasPagar() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditarConta(conta)}>
-                            Editar
-                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleToggleImportante(conta.id, conta.importante)}>
                             {conta.importante ? "Remover importância" : "Marcar como importante"}
                           </DropdownMenuItem>
@@ -681,6 +710,14 @@ export default function ContasPagar() {
                         onClick={() => handleRestaurarConta(conta.id)}
                       >
                         Restaurar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditarConta(conta)}
+                      >
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Editar
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

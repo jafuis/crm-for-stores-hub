@@ -1,9 +1,26 @@
 
-import { Outlet } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { AppSidebar } from "./AppSidebar";
+import AppSidebar from "./AppSidebar";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function AppLayout() {
+  const { user, loading } = useAuth();
+
+  // Se ainda estiver carregando, mostrar um indicador de carregamento
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
+      </div>
+    );
+  }
+
+  // Se o usuário não estiver autenticado após o carregamento, redirecionar para a página de login
+  if (!user) {
+    return <Navigate to="/auth" />;
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50 dark:bg-gray-900">
