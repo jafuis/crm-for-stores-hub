@@ -40,6 +40,7 @@ import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Tarefa {
   id: string;
@@ -250,7 +251,6 @@ export function AppSidebar() {
         .eq('owner_id', user.id)
         .eq('tipo', 'despesa')
         .or(`status.eq.pendente,status.eq.vencida`)
-        .order('importante', { ascending: false })
         .order('data_vencimento', { ascending: true });
       
       if (error) throw error;
@@ -277,7 +277,7 @@ export function AppSidebar() {
           data_vencimento: conta.data_vencimento,
           valor: conta.valor,
           status: status,
-          importante: conta.importante || false
+          importante: false // Default value since it doesn't exist in the database yet
         };
       });
       

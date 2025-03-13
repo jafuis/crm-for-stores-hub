@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface Cliente {
   id: string;
@@ -28,6 +29,7 @@ export default function Aniversariantes() {
   const [currentTab, setCurrentTab] = useState("hoje");
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const carregarAniversariantes = async () => {

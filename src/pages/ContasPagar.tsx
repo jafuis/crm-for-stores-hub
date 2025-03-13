@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -78,7 +77,6 @@ export default function ContasPagar() {
         .eq('tipo', 'despesa')
         .neq('status', 'arquivada')
         .neq('status', 'paga')
-        .order('importante', { ascending: false })
         .order('data_vencimento', { ascending: true });
         
       if (errorAtivas) throw errorAtivas;
