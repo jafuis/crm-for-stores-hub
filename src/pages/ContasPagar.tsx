@@ -103,12 +103,19 @@ export default function ContasPagar() {
           status = 'vencida';
           // Atualizar o status no banco de dados
           try {
-            supabase
-              .from('financas')
-              .update({ status: 'vencida' })
-              .eq('id', conta.id)
-              .then(() => console.log("Status atualizado para vencido"))
-              .catch(err => console.error("Erro ao atualizar status:", err));
+            // Using a Promise without catch - fixing this
+            (async () => {
+              try {
+                await supabase
+                  .from('financas')
+                  .update({ status: 'vencida' })
+                  .eq('id', conta.id);
+                
+                console.log("Status atualizado para vencido");
+              } catch (err) {
+                console.error("Erro ao atualizar status:", err);
+              }
+            })();
           } catch (err) {
             console.error("Erro ao atualizar status:", err);
           }
