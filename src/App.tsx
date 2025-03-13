@@ -5,7 +5,6 @@ import Auth from "@/pages/Auth";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthGuard } from "@/components/AuthGuard";
 import { AppLayout } from "@/components/AppLayout";
-import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import Clientes from "@/pages/Clientes";
 import Vendas from "@/pages/Vendas";
 import Fornecedores from "@/pages/Fornecedores";
@@ -28,11 +27,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<Auth />} />
-          <Route element={
-            <AuthGuard>
-              <AppLayout />
-            </AuthGuard>
-          }>
+          <Route element={<AuthGuard><AppLayout /></AuthGuard>}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/clientes" element={<Clientes />} />
             <Route path="/vendas" element={<Vendas />} />
