@@ -20,6 +20,16 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -70,10 +80,13 @@ const Financas = () => {
   const [valor, setValor] = useState("");
   const [tipo, setTipo] = useState<string>("receita");
   const [categoria, setCategoria] = useState<string>("");
+  const [categoriaOutro, setCategoriaOutro] = useState<string>("");
   const [dataVencimento, setDataVencimento] = useState<string>("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const [filtroTipo, setFiltroTipo] = useState<string>("todos");
   const [activeTab, setActiveTab] = useState<string>("ativos");
@@ -83,7 +96,7 @@ const Financas = () => {
   const [totalReceitas, setTotalReceitas] = useState(0);
   const [totalDespesas, setTotalDespesas] = useState(0);
   const [totalFixas, setTotalFixas] = useState(0);
-  const [vendasDoDia, setVendasDoDia] = useState(0);
+  const [saldoTotal, setSaldoTotal] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -103,21 +116,8 @@ const Financas = () => {
         })
         .subscribe();
 
-      // Set up realtime subscription for sales
-      const salesChannel = supabase
-        .channel('public:sales')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'sales'
-        }, () => {
-          fetchDashboardData();
-        })
-        .subscribe();
-
       return () => {
         supabase.removeChannel(channel);
-        supabase.removeChannel(salesChannel);
       };
     }
   }, [user]);
@@ -125,7 +125,13 @@ const Financas = () => {
   // Reset categoria when tipo changes
   useEffect(() => {
     setCategoria("");
+    setCategoriaOutro("");
   }, [tipo]);
+
+  // Calculate saldo whenever the totals change
+  useEffect(() => {
+    setSaldoTotal(totalReceitas - totalDespesas - totalFixas);
+  }, [totalReceitas, totalDespesas, totalFixas]);
 
   const fetchFinancas = async () => {
     if (!user) return;
@@ -183,25 +189,6 @@ const Financas = () => {
       setTotalReceitas(receitas);
       setTotalDespesas(despesas);
       setTotalFixas(fixas);
-
-      // Fetch today's sales
-      const hoje = new Date();
-      const inicioHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate()).toISOString();
-      const fimHoje = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString();
-
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales')
-        .select('id, total_amount, created_at, status')
-        .eq('owner_id', user.id)
-        .gte('created_at', inicioHoje)
-        .lte('created_at', fimHoje)
-        .neq('status', 'archived');
-
-      if (salesError) throw salesError;
-
-      const totalVendasHoje = salesData?.reduce((total, venda) => total + venda.total_amount, 0) || 0;
-      setVendasDoDia(totalVendasHoje);
-
     } catch (error) {
       console.error("Erro ao buscar dados do dashboard:", error);
     }
@@ -229,6 +216,9 @@ const Financas = () => {
     }
 
     try {
+      // Prepare categoria value - use custom input if "Outros" is selected
+      const categoriaFinal = categoria === "Outros" && categoriaOutro ? categoriaOutro : categoria;
+      
       let result;
       if (isEditing && currentId) {
         // Update existing finance
@@ -238,7 +228,7 @@ const Financas = () => {
             descricao,
             valor: parseFloat(valor),
             tipo,
-            categoria,
+            categoria: categoriaFinal,
             data_vencimento: dataVencimento || null,
             owner_id: user.id
           })
@@ -251,7 +241,7 @@ const Financas = () => {
             descricao,
             valor: parseFloat(valor),
             tipo,
-            categoria,
+            categoria: categoriaFinal,
             data_vencimento: dataVencimento || null,
             owner_id: user.id
           });
@@ -266,6 +256,7 @@ const Financas = () => {
       setValor("");
       setTipo("receita");
       setCategoria("");
+      setCategoriaOutro("");
       setDataVencimento("");
       setIsEditing(false);
       setCurrentId(null);
@@ -292,7 +283,16 @@ const Financas = () => {
     setDescricao(financa.descricao);
     setValor(financa.valor.toString());
     setTipo(financa.tipo);
-    setCategoria(financa.categoria);
+    
+    // Handle custom 'Outros' categoria
+    if (categorias[financa.tipo as keyof typeof categorias].includes(financa.categoria)) {
+      setCategoria(financa.categoria);
+      setCategoriaOutro("");
+    } else {
+      setCategoria("Outros");
+      setCategoriaOutro(financa.categoria);
+    }
+    
     setDataVencimento(financa.data_vencimento || "");
     setIsEditing(true);
     setCurrentId(financa.id);
@@ -355,12 +355,19 @@ const Financas = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const confirmDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteAlertOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    
     try {
       const { error } = await supabase
         .from('financas')
         .delete()
-        .eq('id', id);
+        .eq('id', itemToDelete);
 
       if (error) {
         throw error;
@@ -373,6 +380,8 @@ const Financas = () => {
 
       await fetchFinancas();
       await fetchDashboardData();
+      setDeleteAlertOpen(false);
+      setItemToDelete(null);
     } catch (error) {
       console.error("Erro ao excluir finança:", error);
       toast({
@@ -444,6 +453,7 @@ const Financas = () => {
     setValor("");
     setTipo("receita");
     setCategoria("");
+    setCategoriaOutro("");
     setDataVencimento("");
     setIsEditing(false);
     setCurrentId(null);
@@ -459,8 +469,8 @@ const Financas = () => {
         </Button>
       </div>
 
-      {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Dashboard Cards - 2 per row on all devices */}
+      <div className="grid grid-cols-2 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-lg text-green-600 flex items-center gap-2">
@@ -499,13 +509,15 @@ const Financas = () => {
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg text-orange-600 flex items-center gap-2">
+            <CardTitle className="text-lg text-purple-600 flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
-              Vendas do Dia
+              Balanço Total
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">{formatCurrency(vendasDoDia)}</p>
+            <p className={`text-2xl font-bold ${saldoTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(saldoTotal)}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -574,7 +586,7 @@ const Financas = () => {
                       <Button variant="outline" size="sm" onClick={() => handleArchive(financa.id)} className="w-full md:w-auto">
                         <Archive className="h-4 w-4 mr-1" /> Arquivar
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
+                      <Button variant="destructive" size="sm" onClick={() => confirmDelete(financa.id)} className="w-full md:w-auto">
                         <Trash className="h-4 w-4 mr-1" /> Excluir
                       </Button>
                     </div>
@@ -648,7 +660,7 @@ const Financas = () => {
                       <Button variant="outline" size="sm" onClick={() => handleRestore(financa.id)} className="w-full md:w-auto">
                         <RefreshCcw className="h-4 w-4 mr-1" /> Restaurar
                       </Button>
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(financa.id)} className="w-full md:w-auto">
+                      <Button variant="destructive" size="sm" onClick={() => confirmDelete(financa.id)} className="w-full md:w-auto">
                         <Trash className="h-4 w-4 mr-1" /> Excluir
                       </Button>
                     </div>
@@ -734,6 +746,23 @@ const Financas = () => {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {/* Conditional field for "Outros" */}
+              {categoria === "Outros" && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="categoriaOutro" className="text-right">
+                    Especifique
+                  </Label>
+                  <Input
+                    id="categoriaOutro"
+                    value={categoriaOutro}
+                    onChange={(e) => setCategoriaOutro(e.target.value)}
+                    placeholder="Especifique a categoria"
+                    className="col-span-3"
+                  />
+                </div>
+              )}
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="dataVencimento" className="text-right">
                   Vencimento
@@ -753,6 +782,21 @@ const Financas = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este registro financeiro? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

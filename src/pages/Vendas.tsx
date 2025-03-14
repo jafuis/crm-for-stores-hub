@@ -16,6 +16,16 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -38,6 +48,8 @@ export default function Vendas() {
   const [vendaSendoEditada, setVendaSendoEditada] = useState<Venda | null>(null);
   const [diasAbertos, setDiasAbertos] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -195,27 +207,35 @@ export default function Vendas() {
     }
   };
 
-  const handleExcluirVenda = async (id: string) => {
-    if (!user) return;
+  const confirmDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteAlertOpen(true);
+  };
+
+  const handleExcluirVenda = async () => {
+    if (!itemToDelete || !user) return;
     
     try {
       const { error } = await supabase
         .from('sales')
         .delete()
-        .eq('id', id)
+        .eq('id', itemToDelete)
         .eq('owner_id', user.id);
 
       if (error) {
         throw error;
       }
 
-      const vendasAtualizadas = vendas.filter(venda => venda.id !== id);
+      const vendasAtualizadas = vendas.filter(venda => venda.id !== itemToDelete);
       setVendas(vendasAtualizadas);
 
       toast({
         title: "Venda excluída",
         description: "Venda removida com sucesso!",
       });
+      
+      setDeleteAlertOpen(false);
+      setItemToDelete(null);
     } catch (error) {
       console.error('Erro ao excluir venda:', error);
       toast({
@@ -271,7 +291,7 @@ export default function Vendas() {
   const formatarValor = (valor: number) => {
     return valor.toLocaleString('pt-BR', {
       style: 'currency',
-      currency: 'BRL',
+      currency: 'BRL'
     });
   };
 
@@ -425,7 +445,7 @@ export default function Vendas() {
                   <Button 
                     variant="ghost" 
                     size="icon"
-                    onClick={() => handleExcluirVenda(venda.id)}
+                    onClick={() => confirmDelete(venda.id)}
                   >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
@@ -493,12 +513,12 @@ export default function Vendas() {
                           size="icon"
                           onClick={() => handleArquivarVenda(venda.id)}
                         >
-                          <Archive className="w-4 h-4 text-blue-500" />
+                          <RefreshCcw className="w-4 h-4 text-blue-500" />
                         </Button>
                         <Button 
                           variant="ghost" 
                           size="icon"
-                          onClick={() => handleExcluirVenda(venda.id)}
+                          onClick={() => confirmDelete(venda.id)}
                         >
                           <Trash2 className="w-4 h-4 text-red-500" />
                         </Button>
@@ -573,6 +593,21 @@ export default function Vendas() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta venda? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleExcluirVenda}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

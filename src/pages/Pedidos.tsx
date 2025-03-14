@@ -18,6 +18,16 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +37,8 @@ import {
   Archive, 
   Edit,
   Plus,
-  Search
+  Search,
+  RefreshCcw
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -55,6 +66,8 @@ const Pedidos = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [deleteAlertOpen, setDeleteAlertOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const { toast } = useToast();
   const [filtroStatus, setFiltroStatus] = useState<string>("todos");
   const { user } = useAuth();
@@ -226,12 +239,55 @@ const Pedidos = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleRestore = async (id: string) => {
+    try {
+      const pedido = pedidos.find(p => p.id === id);
+      if (!pedido) return;
+      
+      // Determine the original status or default to "pendente"
+      let originalStatus = "pendente";
+      if (pedido.status === "arquivado") {
+        originalStatus = "pendente"; // Default for restored items
+      }
+      
+      const { error } = await supabase
+        .from('pedidos')
+        .update({ status: originalStatus })
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Sucesso",
+        description: "Pedido restaurado com sucesso",
+      });
+
+      await fetchPedidos();
+    } catch (error) {
+      console.error("Erro ao restaurar pedido:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível restaurar o pedido",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const confirmDelete = (id: string) => {
+    setItemToDelete(id);
+    setDeleteAlertOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+    
     try {
       const { error } = await supabase
         .from('pedidos')
         .delete()
-        .eq('id', id);
+        .eq('id', itemToDelete);
 
       if (error) {
         throw error;
@@ -243,6 +299,8 @@ const Pedidos = () => {
       });
 
       await fetchPedidos();
+      setDeleteAlertOpen(false);
+      setItemToDelete(null);
     } catch (error) {
       console.error("Erro ao excluir pedido:", error);
       toast({
@@ -399,10 +457,18 @@ const Pedidos = () => {
                     <Button variant="outline" size="sm" onClick={() => handleEdit(pedido)} className="w-full md:w-auto">
                       <Edit className="h-4 w-4 mr-1" /> Editar
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)} className="w-full md:w-auto">
-                      <Archive className="h-4 w-4 mr-1" /> Arquivar
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(pedido.id)} className="w-full md:w-auto">
+                    
+                    {pedido.status !== "arquivado" ? (
+                      <Button variant="outline" size="sm" onClick={() => handleArchive(pedido.id)} className="w-full md:w-auto">
+                        <Archive className="h-4 w-4 mr-1" /> Arquivar
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => handleRestore(pedido.id)} className="w-full md:w-auto">
+                        <RefreshCcw className="h-4 w-4 mr-1" /> Restaurar
+                      </Button>
+                    )}
+                    
+                    <Button variant="destructive" size="sm" onClick={() => confirmDelete(pedido.id)} className="w-full md:w-auto">
                       <Trash className="h-4 w-4 mr-1" /> Excluir
                     </Button>
                   </div>
@@ -470,6 +536,7 @@ const Pedidos = () => {
                     <SelectItem value="enviado">Enviado</SelectItem>
                     <SelectItem value="entregue">Entregue</SelectItem>
                     <SelectItem value="cancelado">Cancelado</SelectItem>
+                    <SelectItem value="arquivado">Arquivado</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -504,6 +571,21 @@ const Pedidos = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este pedido? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setItemToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
