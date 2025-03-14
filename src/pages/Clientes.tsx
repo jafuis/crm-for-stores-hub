@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Check, ChevronsUpDown, Plus, Trash2, FileEdit, Phone, Mail, MapPin, Search, ChevronDown } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2, FileEdit, Phone, Mail, MapPin, Search, ChevronDown, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";

@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -219,7 +220,8 @@ export function AppSidebar() {
           nome: cliente.name,
           telefone: cliente.phone || '',
           email: cliente.email || '',
-          aniversario: cliente.birthday || ''
+          aniversario: cliente.birthday || '',
+          classificacao: cliente.classification || 1
         }));
       
       setAniversariantes(aniversariantesHoje);
