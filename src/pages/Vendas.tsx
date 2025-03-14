@@ -118,12 +118,13 @@ export default function Vendas() {
     }
 
     try {
+      // Use the exact date and time selected by the user instead of current time
       const { data, error } = await supabase
         .from('sales')
         .insert({
           total_amount: parseFloat(novaVenda.valor),
           payment_method: novaVenda.produto || null,
-          created_at: novaVenda.data,
+          created_at: novaVenda.data, // This will use the selected date
           owner_id: user.id,
           status: 'completed'
         })

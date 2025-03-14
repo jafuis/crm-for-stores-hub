@@ -219,18 +219,10 @@ export function AppSidebar() {
           nome: cliente.name,
           telefone: cliente.phone || '',
           email: cliente.email || '',
-          aniversario: cliente.birthday || '',
-          classificacao: cliente.classification || 1
+          aniversario: cliente.birthday || ''
         }));
       
       setAniversariantes(aniversariantesHoje);
-      
-      if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
-        toast({
-          title: "Aniversariantes hoje!",
-          description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
-        });
-      }
     } catch (error) {
       console.error("Erro ao buscar aniversariantes:", error);
       setAniversariantes([]);
@@ -294,14 +286,6 @@ export function AppSidebar() {
       });
       
       setContasVencidas(contasRelevantes);
-      
-      if (contasRelevantes.filter(c => c.status === 'vencida').length > 0 && location.pathname !== "/contas-pagar") {
-        toast({
-          title: "Contas vencidas!",
-          description: `Há ${contasRelevantes.filter(c => c.status === 'vencida').length} conta(s) vencidas.`,
-          variant: "destructive"
-        });
-      }
     } catch (error) {
       console.error("Erro ao buscar contas a pagar:", error);
       setContasVencidas([]);

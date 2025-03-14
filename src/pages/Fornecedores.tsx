@@ -323,7 +323,7 @@ export default function Fornecedores() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
           {fornecedoresFiltrados.length === 0 ? (
             <Card className="p-8 text-center col-span-full">
               <h3 className="text-lg font-medium text-gray-500">
@@ -335,7 +335,7 @@ export default function Fornecedores() {
             </Card>
           ) : (
             fornecedoresFiltrados.map((fornecedor) => (
-              <Card key={fornecedor.id} className="p-6 relative">
+              <Card key={fornecedor.id} className="p-6 relative w-full">
                 <div className="absolute top-4 right-4 flex gap-2">
                   <Button
                     variant="ghost"
@@ -369,14 +369,14 @@ export default function Fornecedores() {
                     </AlertDialogContent>
                   </AlertDialog>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{fornecedor.name}</h3>
+                <h3 className="text-xl font-semibold mb-3 pr-16">{fornecedor.name}</h3>
                 <div className="space-y-2 mt-4">
                   {fornecedor.email && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <Mail className="w-4 h-4" />
                       <a 
                         href={formatarEmailParaMailto(fornecedor.email)} 
-                        className="text-gray-600 hover:text-blue-500 transition-colors"
+                        className="text-gray-600 hover:text-blue-500 transition-colors break-all"
                       >
                         {fornecedor.email}
                       </a>
@@ -398,12 +398,12 @@ export default function Fornecedores() {
                   {fornecedor.address && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                       <MapPin className="w-4 h-4" />
-                      {fornecedor.address}
+                      <span className="break-words">{fornecedor.address}</span>
                     </p>
                   )}
                   {fornecedor.products && (
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                      <strong>Produtos:</strong> {fornecedor.products}
+                      <strong>Produtos:</strong> <span className="break-words">{fornecedor.products}</span>
                     </p>
                   )}
                 </div>
