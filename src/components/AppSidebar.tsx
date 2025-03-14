@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -259,17 +258,20 @@ export function AppSidebar() {
         const dataVencimento = parseISO(conta.data_vencimento);
         let status = conta.status;
         
-        // Atualiza o status para "vencida" se passou da data de vencimento
         if (status === 'pendente' && isBefore(dataVencimento, hoje)) {
           status = 'vencida';
-          // Atualiza o status no banco de dados
           try {
-            supabase
-              .from('financas')
-              .update({ status: 'vencida' })
-              .eq('id', conta.id)
-              .then(() => console.log("Status atualizado para vencido"))
-              .catch(err => console.error("Erro ao atualizar status:", err));
+            (async () => {
+              try {
+                await supabase
+                  .from('financas')
+                  .update({ status: 'vencida' })
+                  .eq('id', conta.id);
+                console.log("Status atualizado para vencido");
+              } catch (err) {
+                console.error("Erro ao atualizar status:", err);
+              }
+            })();
           } catch (err) {
             console.error("Erro ao atualizar status:", err);
           }
@@ -281,11 +283,10 @@ export function AppSidebar() {
           data_vencimento: conta.data_vencimento,
           valor: conta.valor,
           status: status,
-          importante: false // Default value since it doesn't exist in the database yet
+          importante: false
         };
       });
       
-      // Filtra apenas contas vencidas ou próximas de vencer (7 dias)
       const contasRelevantes = contasFormatadas.filter(conta => {
         const dataVencimento = parseISO(conta.data_vencimento);
         const limitePrazo = addDays(hoje, 7);
@@ -294,7 +295,6 @@ export function AppSidebar() {
       
       setContasVencidas(contasRelevantes);
       
-      // Notifica sobre contas vencidas se não estiver na página de contas a pagar
       if (contasRelevantes.filter(c => c.status === 'vencida').length > 0 && location.pathname !== "/contas-pagar") {
         toast({
           title: "Contas vencidas!",
