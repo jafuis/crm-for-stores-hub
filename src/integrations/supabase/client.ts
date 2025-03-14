@@ -20,3 +20,16 @@ export const getCurrentUser = async () => {
   }
   return data.user;
 };
+
+// Helper to ensure owner_id is set on data operations
+export const withOwnerId = async (data: Record<string, any>) => {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+  
+  return {
+    ...data,
+    owner_id: user.id
+  };
+};

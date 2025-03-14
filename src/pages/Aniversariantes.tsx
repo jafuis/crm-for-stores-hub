@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -125,14 +124,6 @@ export default function Aniversariantes() {
         
         setAniversariantes(aniversariantesHojeOrdenados);
         setAniversariantesMes(aniversariantesMesOrdenados);
-        
-        // Mostrar notificação de aniversariantes
-        if (aniversariantesHojeOrdenados.length > 0) {
-          toast({
-            title: "Aniversariantes hoje!",
-            description: `Há ${aniversariantesHojeOrdenados.length} cliente(s) fazendo aniversário hoje.`,
-          });
-        }
       } catch (error) {
         console.error('Error fetching aniversariantes:', error);
         toast({
@@ -151,7 +142,7 @@ export default function Aniversariantes() {
     const channel = supabase
       .channel('public:customers')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'customers' },
+        { event: '*', schema: 'public', table: 'customers', filter: `owner_id=eq.${user?.id}` },
         payload => {
           carregarAniversariantes();
         }

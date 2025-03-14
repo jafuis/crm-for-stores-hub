@@ -29,6 +29,7 @@ interface Cliente {
   email: string;
   aniversario: string;
   classificacao: number;
+  endereco?: string;
 }
 
 export default function Clientes() {
@@ -41,6 +42,7 @@ export default function Clientes() {
     email: "",
     aniversario: "",
     classificacao: 1,
+    endereco: "",
   });
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
@@ -56,6 +58,7 @@ export default function Clientes() {
         const { data, error } = await supabase
           .from('customers')
           .select('*')
+          .eq('owner_id', user.id)
           .order('name');
           
         if (error) throw error;
@@ -67,7 +70,8 @@ export default function Clientes() {
           telefone: item.phone || '',
           email: item.email || '',
           aniversario: item.birthday || '',
-          classificacao: item.classification || 1
+          classificacao: item.classification || 1,
+          endereco: item.address || ''
         }));
         
         setClientes(mappedClientes);
@@ -130,6 +134,7 @@ export default function Clientes() {
         email: novoCliente.email,
         birthday: novoCliente.aniversario,
         classification: novoCliente.classificacao,
+        address: novoCliente.endereco,
         owner_id: user.id
       };
       
@@ -167,6 +172,7 @@ export default function Clientes() {
         email: "",
         aniversario: "",
         classificacao: 1,
+        endereco: "",
       });
       setEditingClient(null);
     } catch (error) {
@@ -217,6 +223,7 @@ export default function Clientes() {
       email: cliente.email,
       aniversario: cliente.aniversario,
       classificacao: cliente.classificacao,
+      endereco: cliente.endereco || "",
     });
   };
 
@@ -264,10 +271,8 @@ export default function Clientes() {
           <Star
             key={star}
             className={`w-5 h-5 ${star <= value ? "fill-yellow-400 text-yellow-400" : "text-gray-300"} 
-              ${!readOnly ? "cursor-pointer hover:text-yellow-400" : ""}`}
+              ${!readOnly ? "cursor-pointer" : ""}`}
             onClick={() => !readOnly && onChange && onChange(star)}
-            onMouseEnter={() => {}} // Removido o efeito de hover que estava causando o problema
-            onMouseLeave={() => {}} // Removido o efeito de hover que estava causando o problema
           />
         ))}
       </div>
@@ -328,6 +333,14 @@ export default function Clientes() {
                 />
               </div>
               <div>
+                <Input
+                  placeholder="Endereço"
+                  value={novoCliente.endereco}
+                  onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Aniversário</label>
                 <Input
                   type="date"
                   placeholder="Aniversário"
@@ -405,6 +418,7 @@ export default function Clientes() {
                     <StarRating 
                       value={cliente.classificacao} 
                       onChange={(rating) => handleStarClick(cliente.id, rating)}
+                      readOnly={false}
                     />
                   </div>
                 </div>
@@ -428,6 +442,12 @@ export default function Clientes() {
                       {cliente.telefone}
                     </a>
                   </div>
+                  {cliente.endereco && (
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Home className="w-4 h-4 text-blue-400" />
+                      {cliente.endereco}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-gray-600">
                     <Calendar className="w-4 h-4 text-red-300" />
                     {cliente.aniversario}
@@ -465,6 +485,12 @@ export default function Clientes() {
                             value={novoCliente.email}
                             onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })}
                           />
+                          <Input
+                            placeholder="Endereço"
+                            value={novoCliente.endereco}
+                            onChange={(e) => setNovoCliente({ ...novoCliente, endereco: e.target.value })}
+                          />
+                          <label className="block text-sm text-gray-600 mb-1">Aniversário</label>
                           <Input
                             type="date"
                             placeholder="Aniversário"

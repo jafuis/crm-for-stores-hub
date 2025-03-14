@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar, ArrowUp, ArrowDown, Bell, Gift, CheckSquare } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, CheckSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -35,14 +35,6 @@ interface Tarefa {
   dataVencimento: string;
 }
 
-interface Transaction {
-  id: string;
-  description: string;
-  amount: number;
-  type: 'receita' | 'despesa';
-  date: string;
-}
-
 export default function Dashboard() {
   const currentDate = new Date();
   const currentMonth = format(currentDate, 'MMMM yyyy', { locale: ptBR });
@@ -51,20 +43,9 @@ export default function Dashboard() {
   const [metaDiaria, setMetaDiaria] = useState<number>(5000);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [vendasDiaAnterior, setVendasDiaAnterior] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [newTransaction, setNewTransaction] = useState<{
-    description: string;
-    amount: string;
-    type: 'receita' | 'despesa';
-  }>({
-    description: '',
-    amount: '',
-    type: 'receita'
-  });
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -160,12 +141,6 @@ export default function Dashboard() {
         setMetaDiaria(Number(metaSalva));
       }
       
-      // Check for birthday clients today
-      const aniversariantesHoje = clientesFormatados.filter(cliente => 
-        isAniversarioHoje(cliente.aniversario)
-      );
-      setAniversariantes(aniversariantesHoje);
-      
       // Calculate previous day sales
       const ontem = subDays(new Date(), 1);
       const vendasDiaAnteriorTotal = vendasFormatadas
@@ -179,12 +154,6 @@ export default function Dashboard() {
         .reduce((total, venda) => total + venda.valor, 0);
       
       setVendasDiaAnterior(vendasDiaAnteriorTotal);
-      
-      // Load transactions from localStorage
-      const transactionsSaved = localStorage.getItem(`transactions_${user.id}`);
-      if (transactionsSaved) {
-        setTransactions(JSON.parse(transactionsSaved));
-      }
     } catch (error) {
       console.error("Erro ao buscar dados:", error);
       toast({
@@ -194,19 +163,6 @@ export default function Dashboard() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const isAniversarioHoje = (dataAniversario: string): boolean => {
-    if (!dataAniversario) return false;
-    
-    try {
-      const aniversario = parseISO(dataAniversario);
-      const hoje = new Date();
-      return aniversario.getMonth() === hoje.getMonth() && 
-             aniversario.getDate() === hoje.getDate();
-    } catch (error) {
-      return false;
     }
   };
 
@@ -241,64 +197,6 @@ export default function Dashboard() {
     }
   };
   
-  const handleAddTransaction = () => {
-    if (!newTransaction.description || !newTransaction.amount || !user) {
-      toast({
-        title: "Dados incompletos",
-        description: "Preencha todos os campos",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const amount = parseFloat(newTransaction.amount);
-    
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Valor inválido",
-        description: "Insira um valor positivo",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const novaTransacao: Transaction = {
-      id: crypto.randomUUID(),
-      description: newTransaction.description,
-      amount,
-      type: newTransaction.type,
-      date: new Date().toISOString()
-    };
-    
-    const transacoesAtualizadas = [...transactions, novaTransacao];
-    setTransactions(transacoesAtualizadas);
-    
-    // Salvar no localStorage
-    localStorage.setItem(`transactions_${user.id}`, JSON.stringify(transacoesAtualizadas));
-    
-    // Limpar campos
-    setNewTransaction({
-      description: '',
-      amount: '',
-      type: 'receita'
-    });
-    
-    toast({
-      title: "Transação registrada",
-      description: `${newTransaction.type === 'receita' ? 'Receita' : 'Despesa'} adicionada com sucesso!`,
-    });
-  };
-  
-  const totalReceitas = transactions
-    .filter(transaction => transaction.type === 'receita')
-    .reduce((total, transaction) => total + transaction.amount, 0);
-    
-  const totalDespesas = transactions
-    .filter(transaction => transaction.type === 'despesa')
-    .reduce((total, transaction) => total + transaction.amount, 0);
-    
-  const saldoAtual = totalReceitas - totalDespesas;
-  
   const formatarValor = (valor: number) => {
     return valor.toLocaleString('pt-BR', {
       style: 'currency',
@@ -316,9 +214,8 @@ export default function Dashboard() {
       </div>
 
       <Tabs defaultValue="vendas" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-1">
           <TabsTrigger value="vendas">Vendas e Metas</TabsTrigger>
-          <TabsTrigger value="financeiro">Receitas e Despesas</TabsTrigger>
         </TabsList>
         
         <TabsContent value="vendas" className="space-y-6">
@@ -375,17 +272,10 @@ export default function Dashboard() {
 
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
-                <Gift className="w-5 h-5 text-pink-500" />
+                <CheckSquare className="w-5 h-5 text-[#9b87f5]" />
                 <h3 className="text-sm font-medium text-gray-500">Notificações</h3>
               </div>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm flex items-center">
-                    <Gift className="w-4 h-4 mr-1 text-blue-500" />
-                    Aniversariantes Hoje
-                  </span>
-                  <span className="text-xl font-semibold">{aniversariantes.length}</span>
-                </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm flex items-center">
                     <CheckSquare className="w-4 h-4 mr-1 text-[#9b87f5]" />
@@ -396,131 +286,6 @@ export default function Dashboard() {
               </div>
             </Card>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="financeiro" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ArrowUp className="h-5 w-5 text-green-500" />
-                  Total de Receitas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-green-600">{formatarValor(totalReceitas)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ArrowDown className="h-5 w-5 text-red-500" />
-                  Total de Despesas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold text-red-600">{formatarValor(totalDespesas)}</p>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-blue-500" />
-                  Saldo Atual
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className={`text-2xl font-bold ${saldoAtual >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {formatarValor(saldoAtual)}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Registrar Nova Transação</h2>
-            <div className="grid gap-4">
-              <Input
-                placeholder="Descrição"
-                value={newTransaction.description}
-                onChange={(e) => setNewTransaction({...newTransaction, description: e.target.value})}
-              />
-              
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Valor"
-                value={newTransaction.amount}
-                onChange={(e) => setNewTransaction({...newTransaction, amount: e.target.value})}
-              />
-              
-              <div className="flex gap-4">
-                <Button 
-                  variant={newTransaction.type === 'receita' ? 'default' : 'outline'}
-                  className={newTransaction.type === 'receita' ? 'bg-green-600 hover:bg-green-700' : ''}
-                  onClick={() => setNewTransaction({...newTransaction, type: 'receita'})}
-                >
-                  <ArrowUp className="h-4 w-4 mr-2" />
-                  Receita
-                </Button>
-                <Button 
-                  variant={newTransaction.type === 'despesa' ? 'default' : 'outline'}
-                  className={newTransaction.type === 'despesa' ? 'bg-red-600 hover:bg-red-700' : ''}
-                  onClick={() => setNewTransaction({...newTransaction, type: 'despesa'})}
-                >
-                  <ArrowDown className="h-4 w-4 mr-2" />
-                  Despesa
-                </Button>
-              </div>
-              
-              <Button onClick={handleAddTransaction} className="w-full">
-                Registrar Transação
-              </Button>
-            </div>
-          </Card>
-          
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold mb-4">Últimas Transações</h2>
-            <div className="space-y-4">
-              {transactions.length > 0 ? (
-                transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .slice(0, 5)
-                  .map((transaction) => (
-                    <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          transaction.type === 'receita' ? 'bg-green-100' : 'bg-red-100'
-                        }`}>
-                          {transaction.type === 'receita' ? (
-                            <ArrowUp className={`w-5 h-5 text-green-600`} />
-                          ) : (
-                            <ArrowDown className={`w-5 h-5 text-red-600`} />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(parseISO(transaction.date), "dd/MM/yyyy HH:mm")}
-                          </p>
-                        </div>
-                      </div>
-                      <span className={`font-semibold ${
-                        transaction.type === 'receita' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'receita' ? '+' : '-'} {formatarValor(transaction.amount)}
-                      </span>
-                    </div>
-                  ))
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhuma transação registrada ainda.
-                </div>
-              )}
-            </div>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>
