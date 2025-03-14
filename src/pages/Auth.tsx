@@ -82,10 +82,21 @@ export default function Auth() {
       
       if (error) throw error;
       
-      toast({
-        title: "Cadastro bem-sucedido",
-        description: "Verifique seu email para confirmar seu cadastro.",
-      });
+      // Check if user needs to confirm email
+      if (data.user && !data.user.confirmed_at) {
+        toast({
+          title: "Cadastro bem-sucedido",
+          description: "Verifique seu email para confirmar seu cadastro.",
+        });
+      } else {
+        // Auto-login if email confirmation is disabled
+        setUser(data.user);
+        toast({
+          title: "Cadastro bem-sucedido",
+          description: "Bem-vindo ao sistema!",
+        });
+        navigate("/");
+      }
       
       setView("login");
     } catch (error: any) {
@@ -105,27 +116,35 @@ export default function Auth() {
     setLoading(true);
     
     try {
+      // Use trimmed values to prevent whitespace issues
+      const trimmedEmail = email.trim();
+      const trimmedPassword = password;
+      
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: trimmedEmail,
+        password: trimmedPassword,
       });
       
       if (error) throw error;
       
       // Set user in context
-      setUser(data.user);
-      
-      toast({
-        title: "Login bem-sucedido",
-        description: "Bem-vindo de volta ao sistema!",
-      });
-      
-      navigate("/");
+      if (data?.user) {
+        setUser(data.user);
+        
+        toast({
+          title: "Login bem-sucedido",
+          description: "Bem-vindo de volta ao sistema!",
+        });
+        
+        navigate("/");
+      } else {
+        throw new Error("Falha na autenticação. Nenhum usuário encontrado.");
+      }
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       toast({
         title: "Erro ao fazer login",
-        description: error.message || "Verifique suas credenciais e tente novamente.",
+        description: "Credenciais inválidas. Verifique seu email e senha.",
         variant: "destructive",
       });
     } finally {
@@ -235,6 +254,7 @@ export default function Auth() {
                 value={signupPassword}
                 onChange={(e) => setSignupPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             <div className="space-y-2">
@@ -246,6 +266,7 @@ export default function Auth() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                minLength={6}
               />
               {passwordError && (
                 <p className="text-sm text-red-500">{passwordError}</p>
