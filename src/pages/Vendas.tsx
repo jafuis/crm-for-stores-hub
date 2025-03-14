@@ -118,15 +118,12 @@ export default function Vendas() {
     }
 
     try {
-      // Use the exact date and time selected by the user
-      console.log("Data selecionada para registro:", novaVenda.data);
-      
       const { data, error } = await supabase
         .from('sales')
         .insert({
           total_amount: parseFloat(novaVenda.valor),
           payment_method: novaVenda.produto || null,
-          created_at: novaVenda.data, // Use the exact selected date and time
+          created_at: novaVenda.data,
           owner_id: user.id,
           status: 'completed'
         })
@@ -253,14 +250,12 @@ export default function Vendas() {
     if (!vendaSendoEditada || !user) return;
     
     try {
-      console.log("Data selecionada para edição:", vendaSendoEditada.data);
-      
       const { error } = await supabase
         .from('sales')
         .update({
           total_amount: vendaSendoEditada.valor,
           payment_method: vendaSendoEditada.produto || null,
-          created_at: vendaSendoEditada.data // Use the exact selected date and time
+          created_at: vendaSendoEditada.data
         })
         .eq('id', vendaSendoEditada.id)
         .eq('owner_id', user.id);

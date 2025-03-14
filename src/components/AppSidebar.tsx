@@ -1,4 +1,3 @@
-
 import {
   Users,
   ShoppingCart,
@@ -18,9 +17,7 @@ import {
   Mail,
   DollarSign,
   Receipt,
-  WalletCards,
-  UserPlus,
-  TruckIcon
+  WalletCards
 } from "lucide-react";
 import {
   Sidebar,
@@ -72,12 +69,10 @@ interface ContaPagar {
 const menuItems = [
   { title: "Dashboard", icon: Home, path: "/" },
   { title: "Clientes", icon: Users, path: "/clientes" },
-  { title: "Adicionar Cliente", icon: UserPlus, path: "/clientes?action=new", highlight: true },
   { title: "Pedidos", icon: Package, path: "/pedidos" },
   { title: "Vendas", icon: ShoppingCart, path: "/vendas" },
   { title: "Estoque", icon: Package, path: "/estoque" },
   { title: "Fornecedores", icon: Truck, path: "/fornecedores" },
-  { title: "Adicionar Fornecedor", icon: TruckIcon, path: "/fornecedores?action=new", highlight: true },
   { title: "Finanças", icon: DollarSign, path: "/financas" },
   { title: "A Pagar", icon: WalletCards, path: "/contas-pagar" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
@@ -229,6 +224,13 @@ export function AppSidebar() {
         }));
       
       setAniversariantes(aniversariantesHoje);
+      
+      if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
+        toast({
+          title: "Aniversariantes hoje!",
+          description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
+        });
+      }
     } catch (error) {
       console.error("Erro ao buscar aniversariantes:", error);
       setAniversariantes([]);
@@ -292,6 +294,14 @@ export function AppSidebar() {
       });
       
       setContasVencidas(contasRelevantes);
+      
+      if (contasRelevantes.filter(c => c.status === 'vencida').length > 0 && location.pathname !== "/contas-pagar") {
+        toast({
+          title: "Contas vencidas!",
+          description: `Há ${contasRelevantes.filter(c => c.status === 'vencida').length} conta(s) vencidas.`,
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Erro ao buscar contas a pagar:", error);
       setContasVencidas([]);
@@ -315,93 +325,83 @@ export function AppSidebar() {
         <SidebarGroupLabel className="dark:text-gray-300">Menu</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {menuItems.map((item) => {
-              // Check if this is a path that should include the current query parameters
-              const isActionPath = item.path.includes('?action=');
-              const path = isActionPath ? item.path : item.path;
-              
-              return (
-                <SidebarMenuItem key={item.path}>
-                  <SidebarMenuButton
-                    onClick={() => {
-                      navigate(path);
-                      if (isMobile) {
-                        setOpenMobile(false);
-                      }
-                    }}
-                    className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} 
-                      dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white 
-                      ${location.pathname === item.path.split('?')[0] && !isActionPath ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}
-                      ${item.highlight ? "text-green-600 hover:text-green-700 font-medium" : ""}`}
-                  >
-                    <div className="relative">
-                      {item.title === "Aniversariantes" ? (
-                        <div className={`${hasActiveBirthdays ? 'animate-pulse' : ''}`}>
-                          <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
-                        </div>
-                      ) : item.title === "Tarefas" ? (
-                        <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
-                          <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
-                        </div>
-                      ) : item.title === "A Pagar" ? (
-                        <div className={`${hasOverdueBills ? 'animate-pulse' : ''}`}>
-                          <WalletCards className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasOverdueBills ? 'text-red-500' : ''}`} />
-                        </div>
-                      ) : (
-                        <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${item.highlight ? 'text-green-600' : ''}`} />
-                      )}
-                      
-                      {(item.path === "/aniversariantes" && hasActiveBirthdays) && (
-                        <>
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
-                        </>
-                      )}
+            {menuItems.map((item) => (
+              <SidebarMenuItem key={item.path}>
+                <SidebarMenuButton
+                  onClick={() => {
+                    navigate(item.path);
+                    if (isMobile) {
+                      setOpenMobile(false);
+                    }
+                  }}
+                  className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
+                >
+                  <div className="relative">
+                    {item.title === "Aniversariantes" ? (
+                      <div className={`${hasActiveBirthdays ? 'animate-pulse' : ''}`}>
+                        <Gift className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasActiveBirthdays ? 'text-blue-500' : ''}`} />
+                      </div>
+                    ) : item.title === "Tarefas" ? (
+                      <div className={`${hasPendingTasks ? 'animate-pulse' : ''}`}>
+                        <CheckSquare className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasPendingTasks ? 'text-blue-500' : ''}`} />
+                      </div>
+                    ) : item.title === "A Pagar" ? (
+                      <div className={`${hasOverdueBills ? 'animate-pulse' : ''}`}>
+                        <WalletCards className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'} ${hasOverdueBills ? 'text-red-500' : ''}`} />
+                      </div>
+                    ) : (
+                      <item.icon className={`${isMobile ? 'w-6 h-6' : 'w-5 h-5'}`} />
+                    )}
+                    
+                    {(item.path === "/aniversariantes" && hasActiveBirthdays) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                      </>
+                    )}
 
-                      {(item.path === "/tarefas" && hasPendingTasks) && (
-                        <>
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
-                        </>
-                      )}
-                      
-                      {(item.path === "/contas-pagar" && hasOverdueBills) && (
-                        <>
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                          <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
-                        </>
-                      )}
+                    {(item.path === "/tarefas" && hasPendingTasks) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                      </>
+                    )}
+                    
+                    {(item.path === "/contas-pagar" && hasOverdueBills) && (
+                      <>
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                        <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                      </>
+                    )}
+                  </div>
+                  <span className={`
+                    ${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} 
+                    ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}
+                    ${item.title === "A Pagar" && hasOverdueBills ? 'text-red-500 font-medium' : ''}
+                  `}>
+                    {item.title}
+                  </span>
+                  
+                  {item.title === "Aniversariantes" && hasActiveBirthdays && (
+                    <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                      {aniversariantes.length}
                     </div>
-                    <span className={`
-                      ${item.title === "Aniversariantes" && hasActiveBirthdays ? 'text-blue-500 font-medium' : ''} 
-                      ${item.title === "Tarefas" && hasPendingTasks ? 'text-blue-500 font-medium' : ''}
-                      ${item.title === "A Pagar" && hasOverdueBills ? 'text-red-500 font-medium' : ''}
-                      ${item.highlight ? 'text-green-600 font-medium' : ''}
-                    `}>
-                      {item.title}
-                    </span>
-                    
-                    {item.title === "Aniversariantes" && hasActiveBirthdays && (
-                      <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                        {aniversariantes.length}
-                      </div>
-                    )}
-                    
-                    {item.title === "Tarefas" && hasPendingTasks && (
-                      <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                        {tarefasPendentes.length}
-                      </div>
-                    )}
-                    
-                    {item.title === "A Pagar" && hasOverdueBills && (
-                      <div className="ml-auto bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
-                        {contasVencidas.filter(c => c.status === 'vencida').length}
-                      </div>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
+                  )}
+                  
+                  {item.title === "Tarefas" && hasPendingTasks && (
+                    <div className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                      {tarefasPendentes.length}
+                    </div>
+                  )}
+                  
+                  {item.title === "A Pagar" && hasOverdueBills && (
+                    <div className="ml-auto bg-red-100 text-red-800 text-xs font-medium px-2 py-0.5 rounded-full dark:bg-red-900 dark:text-red-300">
+                      {contasVencidas.filter(c => c.status === 'vencida').length}
+                    </div>
+                  )}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

@@ -4,10 +4,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays, isValid } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar, CheckSquare, Gift } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, CheckSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ interface Cliente {
   telefone: string;
   email: string;
   aniversario: string;
-  endereco?: string;
+  classificacao: number;
 }
 
 interface Tarefa {
@@ -43,7 +43,6 @@ export default function Dashboard() {
   const [metaDiaria, setMetaDiaria] = useState<number>(5000);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [vendasDiaAnterior, setVendasDiaAnterior] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,33 +112,10 @@ export default function Dashboard() {
         telefone: client.phone || '',
         email: client.email || '',
         aniversario: client.birthday || '',
-        endereco: client.address || ''
+        classificacao: client.classification || 0
       }));
       
       setClientes(clientesFormatados);
-      
-      // Fetch birthday people for today
-      const hoje = new Date();
-      
-      const aniversariantesHoje = clientesFormatados
-        .filter(cliente => {
-          if (!cliente.aniversario) return false;
-          
-          try {
-            const aniversario = parseISO(cliente.aniversario);
-            if (!isValid(aniversario)) return false;
-            
-            return (
-              aniversario.getDate() === hoje.getDate() && 
-              aniversario.getMonth() === hoje.getMonth()
-            );
-          } catch (error) {
-            console.error("Erro ao processar aniversário:", error);
-            return false;
-          }
-        });
-      
-      setAniversariantes(aniversariantesHoje);
       
       // Fetch tasks data
       const { data: tasksData, error: tasksError } = await supabase
@@ -282,7 +258,7 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <Calendar className="w-5 h-5 date-icon" />
@@ -297,23 +273,17 @@ export default function Dashboard() {
             <Card className="p-6">
               <div className="flex items-center gap-2 mb-4">
                 <CheckSquare className="w-5 h-5 text-[#9b87f5]" />
-                <h3 className="text-sm font-medium text-gray-500">Tarefas Pendentes</h3>
+                <h3 className="text-sm font-medium text-gray-500">Notificações</h3>
               </div>
-              <p className="text-2xl font-bold mt-2">
-                {tarefasPendentes.length}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Total de tarefas não concluídas</p>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Gift className="w-5 h-5 text-[#9b87f5]" />
-                <h3 className="text-sm font-medium text-gray-500">Aniversariantes Hoje</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center">
+                    <CheckSquare className="w-4 h-4 mr-1 text-[#9b87f5]" />
+                    Tarefas Pendentes
+                  </span>
+                  <span className="text-xl font-semibold">{tarefasPendentes.length}</span>
+                </div>
               </div>
-              <p className="text-2xl font-bold mt-2">
-                {aniversariantes.length}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">Clientes fazendo aniversário</p>
             </Card>
           </div>
         </TabsContent>
