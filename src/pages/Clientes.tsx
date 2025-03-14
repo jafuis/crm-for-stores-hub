@@ -1,19 +1,18 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Check, ChevronsUpDown, Plus, Trash2, FileEdit, Phone, Mail, MapPin, Search } from "lucide-react";
+import { Check, ChevronsUpDown, Plus, Trash2, FileEdit, Phone, Mail, MapPin, Search, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DateRange } from "react-day-picker";
-import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -84,8 +83,13 @@ export default function Clientes() {
         endereco: client.address || ''
       })) || [];
       
-      setClientes(clientesFormatados);
-      setClientesFiltrados(clientesFormatados);
+      // Sort clients alphabetically by name
+      const clientesOrdenados = clientesFormatados.sort((a, b) => 
+        a.nome.localeCompare(b.nome, 'pt-BR')
+      );
+      
+      setClientes(clientesOrdenados);
+      setClientesFiltrados(clientesOrdenados);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
       toast({
@@ -124,7 +128,21 @@ export default function Clientes() {
 
       if (error) throw error;
 
-      setClientes([...clientes, data]);
+      const novoClienteFormatado: Cliente = {
+        id: data.id,
+        nome: data.name,
+        telefone: data.phone || '',
+        email: data.email || '',
+        aniversario: data.birthday || '',
+        endereco: data.address || ''
+      };
+
+      // Add new client and sort again
+      const clientesAtualizados = [...clientes, novoClienteFormatado].sort((a, b) => 
+        a.nome.localeCompare(b.nome, 'pt-BR')
+      );
+      
+      setClientes(clientesAtualizados);
       setNovoCliente({
         id: "",
         nome: "",
@@ -175,9 +193,11 @@ export default function Clientes() {
 
       if (error) throw error;
 
-      setClientes(clientes.map(c => 
+      const clientesAtualizados = clientes.map(c => 
         c.id === clienteEditando.id ? clienteEditando : c
-      ));
+      ).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      
+      setClientes(clientesAtualizados);
       setClienteEditando(null);
       setEditDialogAberto(false);
 
@@ -331,9 +351,9 @@ export default function Clientes() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9b87f5]"></div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-2">
           {clientesFiltrados.length === 0 ? (
-            <Card className="p-8 text-center col-span-full">
+            <Card className="p-8 text-center">
               <h3 className="text-lg font-medium text-gray-500">
                 {searchTerm ? "Nenhum cliente encontrado para essa busca" : "Nenhum cliente encontrado"}
               </h3>
@@ -342,82 +362,97 @@ export default function Clientes() {
               </p>
             </Card>
           ) : (
-            clientesFiltrados.map((cliente) => (
-              <Card key={cliente.id} className="p-6 relative">
-                <div className="absolute top-4 right-4 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditarCliente(cliente)}
-                  >
-                    <FileEdit className="w-4 h-4" />
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="w-4 h-4 text-red-500" />
+            <Accordion type="multiple" className="w-full">
+              {clientesFiltrados.map((cliente) => (
+                <AccordionItem key={cliente.id} value={cliente.id} className="border p-2 rounded-md mb-2">
+                  <div className="flex items-center justify-between">
+                    <AccordionTrigger className="py-2 hover:no-underline">
+                      <span className="font-medium">{cliente.nome}</span>
+                    </AccordionTrigger>
+                    <div className="flex gap-2 mr-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditarCliente(cliente);
+                        }}
+                      >
+                        <FileEdit className="w-4 h-4" />
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleExcluirCliente(cliente.id)}
-                          className="bg-red-500 hover:bg-red-600"
-                        >
-                          Excluir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-                <h3 className="text-xl font-semibold mb-3">{cliente.nome}</h3>
-                <div className="space-y-2 mt-4">
-                  {cliente.email && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      <a 
-                        href={formatarEmailParaMailto(cliente.email)} 
-                        className="text-gray-600 hover:text-blue-500 transition-colors"
-                      >
-                        {cliente.email}
-                      </a>
-                    </p>
-                  )}
-                  {cliente.telefone && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <Phone className="w-4 h-4" /> 
-                      <a 
-                        href={formatarTelefoneParaWhatsApp(cliente.telefone)} 
-                        target="_blank" 
-                        rel="noreferrer" 
-                        className="text-gray-600 hover:text-green-500 transition-colors"
-                      >
-                        {cliente.telefone}
-                      </a>
-                    </p>
-                  )}
-                  {cliente.aniversario && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      {format(parseISO(cliente.aniversario), "dd 'de' MMMM", { locale: ptBR })}
-                    </p>
-                  )}
-                  {cliente.endereco && (
-                    <p className="text-sm text-gray-600 flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {cliente.endereco}
-                    </p>
-                  )}
-                </div>
-              </Card>
-            ))
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir cliente</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleExcluirCliente(cliente.id)}
+                              className="bg-red-500 hover:bg-red-600"
+                            >
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                  <AccordionContent className="pl-4 pr-2 pb-2 pt-4">
+                    <div className="space-y-2">
+                      {cliente.email && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          <a 
+                            href={formatarEmailParaMailto(cliente.email)} 
+                            className="text-gray-600 hover:text-blue-500 transition-colors"
+                          >
+                            {cliente.email}
+                          </a>
+                        </p>
+                      )}
+                      {cliente.telefone && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                          <Phone className="w-4 h-4" /> 
+                          <a 
+                            href={formatarTelefoneParaWhatsApp(cliente.telefone)} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className="text-gray-600 hover:text-green-500 transition-colors"
+                          >
+                            {cliente.telefone}
+                          </a>
+                        </p>
+                      )}
+                      {cliente.aniversario && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" />
+                          {format(parseISO(cliente.aniversario), "dd 'de' MMMM", { locale: ptBR })}
+                        </p>
+                      )}
+                      {cliente.endereco && (
+                        <p className="text-sm text-gray-600 flex items-center gap-2">
+                          <MapPin className="w-4 h-4" />
+                          {cliente.endereco}
+                        </p>
+                      )}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           )}
         </div>
       )}

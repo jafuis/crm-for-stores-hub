@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays, isValid } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
 import { Target, DollarSign, Users, Calendar, CheckSquare, Gift } from "lucide-react";
@@ -25,6 +25,7 @@ interface Cliente {
   telefone: string;
   email: string;
   aniversario: string;
+  endereco?: string;
 }
 
 interface Tarefa {
@@ -111,7 +112,8 @@ export default function Dashboard() {
         nome: client.name,
         telefone: client.phone || '',
         email: client.email || '',
-        aniversario: client.birthday || ''
+        aniversario: client.birthday || '',
+        endereco: client.address || ''
       }));
       
       setClientes(clientesFormatados);
