@@ -263,12 +263,16 @@ export function AppSidebar() {
         if (status === 'pendente' && isBefore(dataVencimento, hoje)) {
           status = 'vencida';
           // Atualiza o status no banco de dados
-          supabase
-            .from('financas')
-            .update({ status: 'vencida' })
-            .eq('id', conta.id)
-            .then(() => console.log("Status atualizado para vencido"))
-            .catch(err => console.error("Erro ao atualizar status:", err));
+          try {
+            supabase
+              .from('financas')
+              .update({ status: 'vencida' })
+              .eq('id', conta.id)
+              .then(() => console.log("Status atualizado para vencido"))
+              .catch(err => console.error("Erro ao atualizar status:", err));
+          } catch (err) {
+            console.error("Erro ao atualizar status:", err);
+          }
         }
         
         return {

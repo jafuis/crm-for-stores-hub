@@ -1,7 +1,7 @@
 
 import { Outlet, Navigate } from "react-router-dom";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import AppSidebar from "./AppSidebar";
+import { AppSidebar } from "./AppSidebar";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function AppLayout() {
