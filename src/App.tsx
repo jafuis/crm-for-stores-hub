@@ -23,6 +23,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { AuthGuard } from "./components/AuthGuard";
 import { AuthProvider } from "./contexts/AuthContext";
+import { AppThemeProvider } from "./contexts/ThemeContext";
 import { Toaster } from "./components/ui/toaster";
 import "./App.css";
 
@@ -49,8 +50,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ErrorBoundary FallbackComponent={Fallback}>
-          <RouterProvider router={router} />
-          <Toaster />
+          <AppThemeProvider>
+            <RouterProvider router={router} />
+            <Toaster />
+          </AppThemeProvider>
         </ErrorBoundary>
       </AuthProvider>
     </QueryClientProvider>
@@ -134,7 +137,7 @@ const router = createBrowserRouter([
     ]
   },
   {
-    path: "/login",
+    path: "/auth",
     element: <Auth />
   }
 ]);
