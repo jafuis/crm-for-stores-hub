@@ -1,3 +1,4 @@
+
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "react-error-boundary";
@@ -22,7 +23,6 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
 import { AuthProvider } from "./contexts/AuthContext";
-import { AppThemeProvider } from "./contexts/ThemeContext";
 import { Toaster } from "./components/ui/toaster";
 import "./App.css";
 
@@ -49,10 +49,8 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ErrorBoundary FallbackComponent={Fallback}>
-          <AppThemeProvider>
-            <RouterProvider router={router} />
-            <Toaster />
-          </AppThemeProvider>
+          <RouterProvider router={router} />
+          <Toaster />
         </ErrorBoundary>
       </AuthProvider>
     </QueryClientProvider>
