@@ -21,6 +21,14 @@ interface Cliente {
   email: string;
 }
 
+interface EmailHistoryItem {
+  id: string;
+  assunto: string;
+  destinatarios: number;
+  data: string;
+  status: 'enviado' | 'falha';
+}
+
 export default function Emails() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
@@ -31,6 +39,7 @@ export default function Emails() {
   const [conteudo, setConteudo] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [emailHistory, setEmailHistory] = useState<EmailHistoryItem[]>([]);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -38,6 +47,7 @@ export default function Emails() {
   useEffect(() => {
     if (user) {
       fetchClientes();
+      fetchEmailHistory();
     } else {
       setIsLoading(false);
     }
@@ -72,6 +82,30 @@ export default function Emails() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchEmailHistory = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('email_history')
+        .select('*')
+        .eq('owner_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const history = data.map(item => ({
+        id: item.id,
+        assunto: item.subject,
+        destinatarios: item.recipient_count,
+        data: item.created_at,
+        status: item.status,
+      }));
+
+      setEmailHistory(history);
+    } catch (error) {
+      console.error('Erro ao carregar histórico de emails:', error);
     }
   };
 
@@ -113,10 +147,38 @@ export default function Emails() {
         selectedClientes.includes(cliente.id)
       );
       
-      // In a real implementation, this would call a Supabase edge function to send emails
-      // For now, we'll just simulate sending and show a success message
+      // Call Supabase Edge Function to send emails
+      const { data, error } = await supabase.functions.invoke("send-email", {
+        body: {
+          from: {
+            email: remetente,
+            name: fromName
+          },
+          subject: assunto,
+          content: conteudo,
+          recipients: clientesSelecionados.map(cliente => ({
+            email: cliente.email,
+            name: cliente.nome
+          }))
+        }
+      });
       
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API call
+      if (error) throw error;
+      
+      // Record email history in database
+      const { error: historyError } = await supabase
+        .from('email_history')
+        .insert({
+          owner_id: user?.id,
+          subject: assunto,
+          recipient_count: clientesSelecionados.length,
+          status: 'enviado',
+          content: conteudo
+        });
+      
+      if (historyError) console.error('Erro ao registrar histórico:', historyError);
+
+      await fetchEmailHistory();
       
       toast({
         title: "E-mails enviados com sucesso",
@@ -225,9 +287,9 @@ export default function Emails() {
                     />
                   </div>
                 </div>
-                <div className="space-y-4 mt-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium">Destinatários</h3>
+                <div className="space-y-4 mt-8 pt-4 border-t">
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <h3 className="text-lg font-medium mb-2 md:mb-0">Destinatários</h3>
                     <div className="flex items-center space-x-2">
                       <Checkbox 
                         id="selectAll" 
@@ -243,9 +305,9 @@ export default function Emails() {
                     </div>
                   ) : clientes.length > 0 ? (
                     <div className="border rounded-md max-h-[300px] overflow-y-auto p-4">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {clientes.map((cliente) => (
-                          <div key={cliente.id} className="flex items-center space-x-2 border-b pb-2">
+                          <div key={cliente.id} className="flex items-center space-x-3 border-b pb-3">
                             <Checkbox 
                               id={`cliente-${cliente.id}`} 
                               checked={selectedClientes.includes(cliente.id)}
@@ -289,12 +351,52 @@ export default function Emails() {
         </TabsContent>
 
         <TabsContent value="historico" className="mt-4">
-          <Card className="p-6 text-center">
-            <Mail className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Histórico de E-mails</h3>
-            <p className="text-muted-foreground">
-              O histórico de e-mails enviados aparecerá aqui
-            </p>
+          <Card className="p-6">
+            {emailHistory.length > 0 ? (
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Histórico de E-mails Enviados</h3>
+                <div className="border rounded-md overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Assunto</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Destinatários</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                      {emailHistory.map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{item.assunto}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">{item.destinatarios}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                            {new Date(item.data).toLocaleDateString('pt-BR')}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              item.status === 'enviado' 
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                            }`}>
+                              {item.status === 'enviado' ? 'Enviado' : 'Falha'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Mail className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                <h3 className="text-lg font-medium mb-2">Histórico de E-mails</h3>
+                <p className="text-muted-foreground">
+                  Nenhum e-mail enviado até o momento
+                </p>
+              </div>
+            )}
           </Card>
         </TabsContent>
       </Tabs>

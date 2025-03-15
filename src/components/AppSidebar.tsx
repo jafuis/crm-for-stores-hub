@@ -315,9 +315,9 @@ export function AppSidebar() {
       <SidebarGroup>
         <SidebarGroupLabel className="dark:text-gray-300">Menu</SidebarGroupLabel>
         <SidebarGroupContent>
-          <SidebarMenu>
+          <SidebarMenu className="space-y-1.5">
             {menuItems.map((item) => (
-              <SidebarMenuItem key={item.path}>
+              <SidebarMenuItem key={item.path} className="px-1">
                 <SidebarMenuButton
                   onClick={() => {
                     navigate(item.path);
@@ -325,7 +325,7 @@ export function AppSidebar() {
                       setOpenMobile(false);
                     }
                   }}
-                  className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""}`}
+                  className={`text-base md:text-base ${isMobile ? 'text-lg' : ''} dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white ${location.pathname === item.path ? "bg-secondary dark:bg-gray-700 dark:text-white" : ""} py-2.5`}
                 >
                   <div className="relative">
                     {item.title === "Aniversariantes" ? (
