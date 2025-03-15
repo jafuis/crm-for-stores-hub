@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays } from "date-fns";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays, isValid } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
 import { Target, DollarSign, Users, Calendar, CheckSquare } from "lucide-react";
@@ -146,7 +145,7 @@ export default function Dashboard() {
       const vendasDiaAnteriorTotal = vendasFormatadas
         .filter(venda => {
           const dataVenda = parseISO(venda.data);
-          return isWithinInterval(dataVenda, {
+          return isValid(dataVenda) && isWithinInterval(dataVenda, {
             start: startOfDay(ontem),
             end: endOfDay(ontem)
           }) && !venda.arquivada;

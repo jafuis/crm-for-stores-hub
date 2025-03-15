@@ -1,3 +1,4 @@
+
 import {
   Users,
   ShoppingCart,
@@ -77,6 +78,7 @@ const menuItems = [
   { title: "A Pagar", icon: WalletCards, path: "/contas-pagar" },
   { title: "Tarefas", icon: CheckSquare, path: "/tarefas" },
   { title: "Aniversariantes", icon: Gift, path: "/aniversariantes" },
+  { title: "E-mails", icon: Mail, path: "/emails" },
   { title: "Relatórios", icon: FileText, path: "/relatorios" },
   { title: "Novos Projetos", icon: Lightbulb, path: "/novos-projetos" },
   { title: "Configurações", icon: Settings, path: "/configuracoes" },
@@ -225,12 +227,7 @@ export function AppSidebar() {
       
       setAniversariantes(aniversariantesHoje);
       
-      if (aniversariantesHoje.length > 0 && location.pathname !== "/aniversariantes") {
-        toast({
-          title: "Aniversariantes hoje!",
-          description: `Há ${aniversariantesHoje.length} cliente(s) fazendo aniversário hoje.`,
-        });
-      }
+      // Removed the pop-up notification for birthdays
     } catch (error) {
       console.error("Erro ao buscar aniversariantes:", error);
       setAniversariantes([]);
@@ -295,13 +292,7 @@ export function AppSidebar() {
       
       setContasVencidas(contasRelevantes);
       
-      if (contasRelevantes.filter(c => c.status === 'vencida').length > 0 && location.pathname !== "/contas-pagar") {
-        toast({
-          title: "Contas vencidas!",
-          description: `Há ${contasRelevantes.filter(c => c.status === 'vencida').length} conta(s) vencidas.`,
-          variant: "destructive"
-        });
-      }
+      // Removed the pop-up notification for overdue accounts
     } catch (error) {
       console.error("Erro ao buscar contas a pagar:", error);
       setContasVencidas([]);
