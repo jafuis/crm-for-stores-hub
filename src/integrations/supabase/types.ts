@@ -45,6 +45,36 @@ export type Database = {
         }
         Relationships: []
       }
+      email_history: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          owner_id: string | null
+          recipient_count: number
+          status: string
+          subject: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          recipient_count: number
+          status?: string
+          subject: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          owner_id?: string | null
+          recipient_count?: number
+          status?: string
+          subject?: string
+        }
+        Relationships: []
+      }
       financas: {
         Row: {
           categoria: string

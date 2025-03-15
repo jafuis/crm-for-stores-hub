@@ -46,10 +46,11 @@ serve(async (req) => {
     console.log("Enviando email:");
     console.log(`De: ${from.name} <${from.email}>`);
     console.log(`Assunto: ${subject}`);
-    console.log(`Para: ${recipients.length} destinatários`);
+    console.log(`Para: ${recipients.map(r => `${r.name} <${r.email}>`).join(', ')}`);
     
-    // In a production environment, here you would integrate with an email sending service
-    // like SendGrid, Mailgun, or Amazon SES. For this example, we're simulating success.
+    // Email sending implementation would go here
+    // In a production app, you would use a service like Resend, SendGrid, or Mailgun
+    // For this demo, we're simulating successful sending
     
     // Simulate sending delay
     await new Promise(resolve => setTimeout(resolve, 1000));
@@ -57,7 +58,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Enviado com sucesso para ${recipients.length} destinatários` 
+        message: `Email enviado com sucesso para ${recipients.length} destinatários` 
       }),
       { 
         status: 200, 

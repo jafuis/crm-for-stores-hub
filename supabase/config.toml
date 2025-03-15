@@ -1,13 +1,12 @@
 
+# This is a Supabase config file
+
 project_id = "nklyzlsraydlftzfjrod"
 
 [api]
 enabled = true
 port = 54321
 schemas = ["public", "storage"]
-
-[[api.jwt_secret]]
-path = "jwt-secret.txt"
 
 [db]
 port = 54322
@@ -23,5 +22,5 @@ port = 54324
 [storage]
 enabled = true
 
-[edge_functions]
+[functions]
 enabled = true

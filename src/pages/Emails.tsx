@@ -100,7 +100,7 @@ export default function Emails() {
         assunto: item.subject,
         destinatarios: item.recipient_count,
         data: item.created_at,
-        status: item.status,
+        status: item.status as 'enviado' | 'falha',
       }));
 
       setEmailHistory(history);
@@ -178,6 +178,7 @@ export default function Emails() {
       
       if (historyError) console.error('Erro ao registrar histórico:', historyError);
 
+      // Refresh email history
       await fetchEmailHistory();
       
       toast({
@@ -287,10 +288,10 @@ export default function Emails() {
                     />
                   </div>
                 </div>
-                <div className="space-y-4 mt-8 pt-4 border-t">
+                <div className="space-y-4 mt-10 pt-6 border-t">
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                    <h3 className="text-lg font-medium mb-2 md:mb-0">Destinatários</h3>
-                    <div className="flex items-center space-x-2">
+                    <h3 className="text-lg font-medium mb-3 md:mb-0">Destinatários</h3>
+                    <div className="flex items-center space-x-2 mb-4">
                       <Checkbox 
                         id="selectAll" 
                         checked={selectAll}
@@ -307,7 +308,7 @@ export default function Emails() {
                     <div className="border rounded-md max-h-[300px] overflow-y-auto p-4">
                       <div className="space-y-3">
                         {clientes.map((cliente) => (
-                          <div key={cliente.id} className="flex items-center space-x-3 border-b pb-3">
+                          <div key={cliente.id} className="flex items-center space-x-3 border-b pb-3 mb-3">
                             <Checkbox 
                               id={`cliente-${cliente.id}`} 
                               checked={selectedClientes.includes(cliente.id)}
