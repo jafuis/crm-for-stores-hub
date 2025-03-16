@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Initialize Resend client with API key (replaced with correct key)
+// Initialize Resend client with API key (use environment variable in production)
 const resend = new Resend("re_Sgwtowk1_B4PkghTGSDCBFAFRBEtD1tBE");
 
 interface Recipient {
@@ -56,13 +56,13 @@ serve(async (req) => {
     const to = recipients.map(recipient => recipient.email);
     
     // Send email using Resend with verified domain
-    // Note: We're using onboarding@resend.dev as the from address which is pre-verified
-    // But setting the reply-to as the user's email
+    // Using Resend's verified domain (onboarding@resend.dev) as the sender
+    // and setting the user's email as reply-to
     const { data, error } = await resend.emails.send({
-      from: "Onboarding <onboarding@resend.dev>", // Using Resend's verified domain
-      reply_to: from.email, // User's email for replies
+      from: "Onboarding <onboarding@resend.dev>",
+      reply_to: from.email,
       to,
-      subject: `${subject} (De: ${from.name})`, // Include sender name in subject for clarity
+      subject: `${subject} (De: ${from.name})`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <p style="color: #666;">Mensagem enviada por: ${from.name} (${from.email})</p>
