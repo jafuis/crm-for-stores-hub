@@ -55,10 +55,11 @@ serve(async (req) => {
     // Prepare recipients list for Resend
     const to = recipients.map(recipient => recipient.email);
     
-    // Send email using Resend
+    // Send email using Resend with verified sender domain
+    // This is crucial - using a verified sender domain from Resend
     const { data, error } = await resend.emails.send({
-      from: `${from.name} <${from.email}>`, // Use the sender's actual email
-      reply_to: from.email,
+      from: "Onboarding <onboarding@resend.dev>", // Using Resend's verified domain
+      reply_to: from.email, // User's email for replies
       to,
       subject,
       html: content,
