@@ -23,5 +23,8 @@ port = 54324
 enabled = true
 
 [functions]
-[functions.serve]
-enabled = true
+  [functions.delete-user]
+  verify_jwt = true
+  
+  [functions.send-email]
+  verify_jwt = false
