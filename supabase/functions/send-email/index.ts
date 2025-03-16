@@ -7,8 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Initialize Resend client with API key
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+// Initialize Resend client with API key (replaced with correct key)
+const resend = new Resend("re_Sgwtowk1_B4PkghTGSDCBFAFRBEtD1tBE");
 
 interface Recipient {
   email: string;
@@ -55,14 +55,23 @@ serve(async (req) => {
     // Prepare recipients list for Resend
     const to = recipients.map(recipient => recipient.email);
     
-    // Send email using Resend with verified sender domain
-    // This is crucial - using a verified sender domain from Resend
+    // Send email using Resend with verified domain
+    // Note: We're using onboarding@resend.dev as the from address which is pre-verified
+    // But setting the reply-to as the user's email
     const { data, error } = await resend.emails.send({
       from: "Onboarding <onboarding@resend.dev>", // Using Resend's verified domain
       reply_to: from.email, // User's email for replies
       to,
-      subject,
-      html: content,
+      subject: `${subject} (De: ${from.name})`, // Include sender name in subject for clarity
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <p style="color: #666;">Mensagem enviada por: ${from.name} (${from.email})</p>
+          <hr style="border: 1px solid #eee; margin: 20px 0;" />
+          ${content}
+          <hr style="border: 1px solid #eee; margin: 20px 0;" />
+          <p style="color: #999; font-size: 12px;">Este email foi enviado através do sistema de emails da aplicação.</p>
+        </div>
+      `,
     });
     
     if (error) {
