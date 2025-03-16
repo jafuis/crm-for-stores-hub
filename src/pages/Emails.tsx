@@ -34,7 +34,6 @@ export default function Emails() {
   const [selectedClientes, setSelectedClientes] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [assunto, setAssunto] = useState("");
-  const [remetente, setRemetente] = useState("");
   const [fromName, setFromName] = useState("");
   const [conteudo, setConteudo] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +47,10 @@ export default function Emails() {
     if (user) {
       fetchClientes();
       fetchEmailHistory();
+      // Definir nome do remetente (se não estiver já definido)
+      if (!fromName) {
+        setFromName(user.user_metadata?.name || "Minha Loja");
+      }
     } else {
       setIsLoading(false);
     }
@@ -131,7 +134,7 @@ export default function Emails() {
   };
 
   const handleEnviarEmail = async () => {
-    if (!remetente || !fromName || !assunto || !conteudo || selectedClientes.length === 0) {
+    if (!fromName || !assunto || !conteudo || selectedClientes.length === 0) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos e selecione pelo menos um cliente.",
@@ -151,7 +154,7 @@ export default function Emails() {
       const { data, error } = await supabase.functions.invoke("send-email", {
         body: {
           from: {
-            email: remetente,
+            email: user?.email || "",
             name: fromName
           },
           subject: assunto,
@@ -244,17 +247,7 @@ export default function Emails() {
           <Card className="p-6">
             <div className="grid gap-6">
               <div className="space-y-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="remetente">E-mail do Remetente</Label>
-                    <Input 
-                      id="remetente" 
-                      type="email" 
-                      placeholder="seu-email@exemplo.com" 
-                      value={remetente}
-                      onChange={(e) => setRemetente(e.target.value)}
-                    />
-                  </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="fromName">Nome do Remetente</Label>
                     <Input 
@@ -263,6 +256,9 @@ export default function Emails() {
                       value={fromName}
                       onChange={(e) => setFromName(e.target.value)}
                     />
+                    <p className="text-sm text-muted-foreground">
+                      Seu e-mail de remetente: <strong>{user?.email}</strong>
+                    </p>
                   </div>
                 </div>
                 <div className="space-y-2">

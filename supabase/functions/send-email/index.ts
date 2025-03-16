@@ -1,10 +1,14 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { Resend } from "npm:resend@1.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+// Inicializa o cliente Resend com a chave API
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface Recipient {
   email: string;
@@ -48,17 +52,30 @@ serve(async (req) => {
     console.log(`Assunto: ${subject}`);
     console.log(`Para: ${recipients.map(r => `${r.name} <${r.email}>`).join(', ')}`);
     
-    // Email sending implementation would go here
-    // In a production app, you would use a service like Resend, SendGrid, or Mailgun
-    // For this demo, we're simulating successful sending
+    // Prepare recipients list for Resend
+    const to = recipients.map(recipient => recipient.email);
     
-    // Simulate sending delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Send email using Resend
+    const { data, error } = await resend.emails.send({
+      from: `${from.name} <onboarding@resend.dev>`, // Use Resend verified domain (you should replace with your own domain later)
+      reply_to: from.email,
+      to,
+      subject,
+      html: content,
+    });
+    
+    if (error) {
+      console.error("Erro ao enviar email com Resend:", error);
+      throw new Error(`Falha ao enviar e-mail: ${error.message}`);
+    }
+    
+    console.log("Email enviado com sucesso:", data);
     
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Email enviado com sucesso para ${recipients.length} destinatários` 
+        message: `Email enviado com sucesso para ${recipients.length} destinatários`,
+        data
       }),
       { 
         status: 200, 

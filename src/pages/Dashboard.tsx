@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, startOfDay, endOfDay, subDays, isValid } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 import { ptBR } from "date-fns/locale";
-import { Target, DollarSign, Users, Calendar, CheckSquare } from "lucide-react";
+import { Target, DollarSign, Users, Calendar, CheckSquare, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -45,6 +46,7 @@ export default function Dashboard() {
   const [tarefasPendentes, setTarefasPendentes] = useState<Tarefa[]>([]);
   const [vendasDiaAnterior, setVendasDiaAnterior] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [aniversariantes, setAniversariantes] = useState<Cliente[]>([]);
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -153,6 +155,28 @@ export default function Dashboard() {
         .reduce((total, venda) => total + venda.valor, 0);
       
       setVendasDiaAnterior(vendasDiaAnteriorTotal);
+      
+      // Identificar aniversariantes do dia
+      const hoje = new Date();
+      const aniversariantesHoje = clientesFormatados
+        .filter(cliente => {
+          if (!cliente.aniversario) return false;
+          
+          try {
+            const aniversario = parseISO(cliente.aniversario);
+            if (!isValid(aniversario)) return false;
+            
+            return (
+              aniversario.getDate() === hoje.getDate() && 
+              aniversario.getMonth() === hoje.getMonth()
+            );
+          } catch (error) {
+            console.error("Erro ao processar aniversário:", error);
+            return false;
+          }
+        });
+      
+      setAniversariantes(aniversariantesHoje);
     } catch (error) {
       console.error("Erro ao buscar dados:", error);
       toast({
@@ -281,6 +305,14 @@ export default function Dashboard() {
                     Tarefas Pendentes
                   </span>
                   <span className="text-xl font-semibold">{tarefasPendentes.length}</span>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm flex items-center">
+                    <Gift className="w-4 h-4 mr-1 text-[#9b87f5]" />
+                    Aniversariantes Hoje
+                  </span>
+                  <span className="text-xl font-semibold">{aniversariantes.length}</span>
                 </div>
               </div>
             </Card>
