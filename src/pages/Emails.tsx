@@ -47,7 +47,7 @@ export default function Emails() {
     if (user) {
       fetchClientes();
       fetchEmailHistory();
-      // Definir nome do remetente (se não estiver já definido)
+      // Set sender name if not already defined
       if (!fromName) {
         setFromName(user.user_metadata?.name || "Minha Loja");
       }

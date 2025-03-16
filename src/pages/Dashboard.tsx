@@ -156,7 +156,7 @@ export default function Dashboard() {
       
       setVendasDiaAnterior(vendasDiaAnteriorTotal);
       
-      // Identificar aniversariantes do dia
+      // Identify birthday celebrants for today
       const hoje = new Date();
       const aniversariantesHoje = clientesFormatados
         .filter(cliente => {
@@ -314,6 +314,20 @@ export default function Dashboard() {
                   </span>
                   <span className="text-xl font-semibold">{aniversariantes.length}</span>
                 </div>
+                
+                {aniversariantes.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <h4 className="text-sm font-medium mb-2">Quem faz aniversário hoje:</h4>
+                    <ul className="space-y-1">
+                      {aniversariantes.map(cliente => (
+                        <li key={cliente.id} className="text-sm text-gray-600 dark:text-gray-300 flex items-center">
+                          <Gift className="w-3 h-3 mr-1 text-[#9b87f5]" />
+                          {cliente.nome}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </Card>
           </div>

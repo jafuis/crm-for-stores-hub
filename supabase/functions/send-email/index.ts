@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Inicializa o cliente Resend com a chave API
+// Initialize Resend client with API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 interface Recipient {
@@ -57,7 +57,7 @@ serve(async (req) => {
     
     // Send email using Resend
     const { data, error } = await resend.emails.send({
-      from: `${from.name} <onboarding@resend.dev>`, // Use Resend verified domain (you should replace with your own domain later)
+      from: `${from.name} <${from.email}>`, // Use the sender's actual email
       reply_to: from.email,
       to,
       subject,
